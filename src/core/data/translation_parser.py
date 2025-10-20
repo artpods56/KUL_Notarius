@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 from typing import Optional, Tuple, Dict, Any, cast
 
-from core.schemas.data.schematism import SchematismPage
+from schemas.data.schematism import SchematismPage
 from thefuzz import fuzz, process
 
 from structlog import get_logger

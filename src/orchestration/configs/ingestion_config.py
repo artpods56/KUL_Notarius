@@ -1,11 +1,4 @@
-from dagster import ConfigMapping
-
-from orchestration.assets.ingest import DatasetConfig, pdf_to_dataset
-from orchestration.assets.transform import OpConfig
-
-
-
-
+from orchestration.assets.ingest import DatasetConfig
 
 HUGGINGFACE_DATASET_INGESTION_OP_CONFIG = {
             "huggingface_dataset": {
@@ -17,15 +10,3 @@ HUGGINGFACE_DATASET_INGESTION_OP_CONFIG = {
             }
     }
 
-HUGGINGFACE_DATASET_TRANSFORMATION_OP_CONFIG = {
-            "filtered_huggingface_dataset": {
-                "config": OpConfig(
-                    op_type="filter",
-                    op_name="filter_schematisms",
-                    input_columns=["schematism_name"],
-                    kwargs={
-                        "to_filter": ["wloclawek_1872"]
-                    }
-                ).model_dump()
-            }
-    }

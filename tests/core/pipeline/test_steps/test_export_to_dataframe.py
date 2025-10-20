@@ -3,8 +3,8 @@ import pytest
 
 from core.pipeline.steps.export import SaveDataFrameStep
 from core.pipeline.steps.transformation import ToPandasDataFrameStep
-from core.schemas.data.pipeline import PipelineData
-from core.schemas.data.schematism import SchematismPage, SchematismEntry
+from schemas import PipelineData
+from schemas.data.schematism import SchematismPage, SchematismEntry
 
 
 def _entry(

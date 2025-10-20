@@ -1,9 +1,7 @@
 from pathlib import Path
 
-import pytest
-
 from core.caches.ocr_cache import PyTesseractCache
-from core.schemas.caches.entries import PyTesseractCacheItem
+from schemas import PyTesseractCacheItem
 
 
 def test_ocr_cache_persistence(tmp_path: Path):

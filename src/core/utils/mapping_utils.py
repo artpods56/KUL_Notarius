@@ -8,7 +8,7 @@ import structlog
 import wandb
 
 from core.utils.shared import TMP_DIR
-from core.schemas.data.schematism import SchematismPage
+from schemas.data.schematism import SchematismPage
 
 logger = structlog.get_logger(__name__)
 

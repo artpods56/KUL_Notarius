@@ -70,7 +70,7 @@ class TestConfigSchemaRegistration:
 
     def test_lmv3_model_config_registered(self):
         """Test that LMv3 model config is registered."""
-        from core.schemas.configs.lmv3_model_config import BaseLMv3ModelConfig
+        from schemas import BaseLMv3ModelConfig
 
         schema = get_config_schema(ConfigType.MODELS, ModelsConfigSubtype.LMV3)
         assert schema is not None
@@ -79,21 +79,21 @@ class TestConfigSchemaRegistration:
     def test_base_dataset_configs_registered(self):
         """Test that data configs are registered."""
         # Default data config
-        from core.schemas.configs.dataset_config import BaseDatasetConfig
+        from schemas.configs.dataset_config import BaseDatasetConfig
 
         schema = get_config_schema(ConfigType.DATASET, DatasetConfigSubtype.DEFAULT)
         assert schema is not None
         assert schema.__name__ == BaseDatasetConfig.__name__
 
         # Training data config
-        from core.schemas.configs.dataset_config import LayoutLMv3TrainingDatasetConfig
+        from schemas.configs.dataset_config import LayoutLMv3TrainingDatasetConfig
 
         schema = get_config_schema(ConfigType.DATASET, DatasetConfigSubtype.TRAINING)
         assert schema is not None
         assert schema.__name__ == LayoutLMv3TrainingDatasetConfig.__name__
 
         # Evaluation data config
-        from core.schemas.configs.dataset_config import (
+        from schemas.configs.dataset_config import (
             SchematismsEvaluationDatasetConfig,
         )
 
@@ -103,7 +103,7 @@ class TestConfigSchemaRegistration:
 
     def test_wandb_config_registered(self):
         """Test that Wandb config is registered."""
-        from core.schemas.configs.wandb_config import WandbConfig
+        from schemas.configs.wandb_config import WandbConfig
 
         schema = get_config_schema(ConfigType.WANDB, WandbConfigSubtype.DEFAULT)
         assert schema is not None

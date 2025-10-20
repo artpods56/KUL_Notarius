@@ -10,7 +10,6 @@ from __future__ import annotations
 import json
 import os
 import random
-import re
 import sqlite3
 from typing import Literal, Optional, Callable, Any, Sequence
 
@@ -21,8 +20,8 @@ import sqlalchemy
 from sqlalchemy import Engine
 
 from core.pipeline.steps.base import DatasetProcessingStep
-from core.schemas.data.pipeline import PipelineData
-from core.schemas.data.schematism import SchematismPage
+from schemas import PipelineData
+from schemas.data.schematism import SchematismPage
 from core.utils.shared import TMP_DIR, OUTPUTS_DIR
 
 PreferredSource = Literal["auto", "parsed", "llm", "lmv3", "ground_truth"]

@@ -7,10 +7,9 @@ from dotenv import load_dotenv
 from omegaconf import DictConfig
 from sqlalchemy import create_engine
 
-import core.schemas.configs  # type: ignore
 from core.config.constants import ConfigType, DatasetConfigSubtype, ModelsConfigSubtype
 from core.config.helpers import with_configs
-from core.data.filters import filter_schematisms, filter_empty_samples
+from core.data.filters import filter_schematisms
 from core.models.base import ModelConfigMap
 from core.models.llm.model import LLMModel
 from core.models.lmv3.model import LMv3Model
@@ -28,7 +27,6 @@ from core.pipeline.steps.export import (
 from core.pipeline.steps.ingestion import (
     HuggingFaceIngestionStep,
     FilterMapSpec,
-    PdfFileIngestionStep,
 )
 from core.pipeline.steps.logging import WandbLoggingStep
 from core.pipeline.steps.postprocessing import (
@@ -45,7 +43,7 @@ from core.pipeline.steps.wrappers import (
     DataFrameSchemaMappingStep,
 )
 from core.utils.logging import setup_logging
-from core.utils.shared import TMP_DIR, DATA_DIR
+from core.utils.shared import TMP_DIR
 
 setup_logging()
 

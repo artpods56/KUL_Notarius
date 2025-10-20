@@ -14,8 +14,8 @@ from core.models.llm.model import LLMModel
 from core.models.lmv3.model import LMv3Model
 from core.models.ocr.model import OcrModel
 from core.pipeline.steps.base import SampleProcessingStep
-from core.schemas.data.pipeline import PipelineData
-from core.schemas.data.schematism import SchematismPage
+from schemas import PipelineData
+from schemas.data.schematism import SchematismPage
 
 
 class LanguageDetectionStep(SampleProcessingStep[PipelineData, PipelineData]):

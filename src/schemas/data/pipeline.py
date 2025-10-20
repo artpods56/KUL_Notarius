@@ -1,12 +1,10 @@
-from uuid import UUID
-
 from typing import Any, Dict, Literal
 
 from PIL.Image import Image
 from pydantic import BaseModel, Field
 
-from core.schemas.data.metrics import PageDataMetrics
-from core.schemas.data.schematism import SchematismPage
+from schemas.data.metrics import PageDataMetrics
+from schemas.data.schematism import SchematismPage
 
 PageDataSourceField = Literal[
     "ground_truth",
@@ -17,7 +15,9 @@ PageDataSourceField = Literal[
 ]
 
 class BaseMetaData(BaseModel):
-    sample_id: str = Field(description="Sample ID")
+    sample_id: int = Field(description="Sample ID")
+    schematism_name: str = Field(description="Schematism name")
+    filename: str = Field(description="Schematism filename")
 
 class BaseDataItem(BaseModel):
     image: Image | None = Field(default=None, description="Image used for prediction.")
@@ -28,13 +28,23 @@ class BaseDataItem(BaseModel):
     class Config:
         arbitrary_types_allowed = True
 
-class GroundTruthDataItem(BaseDataItem):
+class HasGroundTruthMixin(BaseModel):
     ground_truth: SchematismPage = Field(description="Ground truth page")
 
-class PredictionDataItem(BaseDataItem):
+class HasPredictionMixin(BaseModel):
     prediction: SchematismPage = Field(description="Prediction page")
 
+class GroundTruthDataItem(BaseDataItem, HasGroundTruthMixin):
+    pass
 
+class PredictionDataItem(BaseDataItem, HasPredictionMixin):
+    pass
+
+class EvaluationDataItem(BaseDataItem, HasGroundTruthMixin, HasPredictionMixin):
+    pass
+
+class BaseDataset[ItemT: BaseDataItem](BaseModel):
+    items: list[ItemT] = Field(description="List of items")
 
 class PipelineData(BaseModel):
     """

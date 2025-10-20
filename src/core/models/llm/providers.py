@@ -17,7 +17,7 @@ from openai.types.shared_params.response_format_json_schema import (
 )
 
 from core.models.llm.utils import encode_image_to_base64, make_all_properties_required
-from core.schemas.data.schematism import SchematismPage
+from schemas.data.schematism import SchematismPage
 
 logger = logging.getLogger(__name__)
 

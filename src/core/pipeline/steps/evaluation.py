@@ -6,7 +6,7 @@ It includes a detailed evaluation step that calculates precision, recall, F1, an
 """
 
 from core.pipeline.steps.base import SampleProcessingStep
-from core.schemas.data.pipeline import PipelineData
+from schemas import PipelineData
 from core.data.metrics import evaluate_json_response
 
 

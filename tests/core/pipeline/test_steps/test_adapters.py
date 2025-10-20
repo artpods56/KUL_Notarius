@@ -3,8 +3,8 @@ import json
 from core.pipeline.steps.transformation import HuggingFaceTransformationStep
 import pytest
 from omegaconf import DictConfig, OmegaConf
-from core.schemas.data.pipeline import PipelineData
-from core.schemas.data.schematism import SchematismPage
+from schemas import PipelineData
+from schemas.data.schematism import SchematismPage
 
 class TestHFIngestionAdapter:
     """Tests for the HFIngestionAdapter class."""

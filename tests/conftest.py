@@ -8,8 +8,8 @@ from omegaconf import DictConfig
 from core.config.constants import DatasetConfigSubtype, ModelsConfigSubtype
 from core.config.manager import ConfigManager, ConfigType
 from core.pipeline.pipeline import Pipeline
-from core.schemas.data.pipeline import PipelineData
-from core.schemas.data.schematism import SchematismPage
+from schemas import PipelineData
+from schemas.data.schematism import SchematismPage
 from core.utils.shared import CONFIGS_DIR
 
 

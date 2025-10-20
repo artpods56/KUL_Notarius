@@ -1,8 +1,8 @@
 from typing import Callable
 from thefuzz import fuzz, process
 
-from core.schemas.data.metrics import Metrics, PageDataMetrics
-from core.schemas.data.schematism import SchematismPage, SchematismEntry
+from schemas import Metrics, PageDataMetrics
+from schemas.data.schematism import SchematismPage, SchematismEntry
 from structlog import get_logger
 import unicodedata
 import re

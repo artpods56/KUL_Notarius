@@ -9,6 +9,10 @@ from core.data.filters import get_op_registry, negate_op
 from orchestration.resources import OpRegistry
 
 import structlog
+
+from schemas.data.dataset import BaseHuggingFaceDatasetSchema, ETLSpecificDatasetFields
+from schemas.data.pipeline import GroundTruthDataItem, BaseDataset, BaseMetaData
+
 logger = structlog.get_logger(__name__)
 
 
@@ -51,14 +55,61 @@ def filtered_huggingface_dataset(context: AssetExecutionContext, huggingface_dat
         }
     )
 
+    no_image_dataset = filtered_dataset.remove_columns("image")
+
     context.add_output_metadata({
         "num_rows": MetadataValue.int(len(filtered_dataset)),
         "num_columns": MetadataValue.int(len(filtered_dataset.column_names)),
         "column_names": MetadataValue.json(filtered_dataset.column_names),
         "random_sample": MetadataValue.json(
-            {k: v for k, v in filtered_dataset[random.randrange(0, len(filtered_dataset))].items() }
+            {k: v for k, v in no_image_dataset[random.randrange(0, len(filtered_dataset))].items() }
         ),
     })
 
 
     return filtered_dataset
+
+
+class DatasetMappingConfig(dg.Config,BaseHuggingFaceDatasetSchema, ETLSpecificDatasetFields):
+    """This config specifies the name of
+    """
+    pass
+
+
+@dg.asset(group_name="data", compute_kind="python")
+def hf_ground_truth_dataset(context: AssetExecutionContext, filtered_huggingface_dataset: Dataset, config: DatasetMappingConfig) -> BaseDataset[GroundTruthDataItem]:
+
+    items: list[GroundTruthDataItem] = []
+
+    for sample in filtered_huggingface_dataset:
+
+
+        item = GroundTruthDataItem(
+            image=sample.get(config.image),
+            ground_truth=sample.get(config.source),
+            metadata=BaseMetaData(
+                sample_id=sample.get(config.sample_id),
+                schematism_name=sample.get(config.schematism_name),
+                filename=sample.get(config.filename),
+            )
+        )
+
+        items.append(item)
+
+    random_sample = items[random.randint(0, len(items) - 1)]
+
+    context.add_asset_metadata({
+        "config": MetadataValue.json(config.model_dump()),
+    })
+
+    context.add_output_metadata(
+        {
+            "random_sample": MetadataValue.json(
+                {
+                    k: v for k, v in random_sample.model_dump().items() if k != "image"
+                }
+            ),
+        }
+    )
+
+    return BaseDataset[GroundTruthDataItem](items=items)

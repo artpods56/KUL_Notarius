@@ -1,20 +1,16 @@
 import pytest
-from pydantic import BaseModel, Field
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import cast
 
 from core.config.registry import (
-    register_config,
     get_config_schema,
     list_registered_configs,
     validate_config_with_schema,
     get_default_config,
-    CONFIG_REGISTRY,
 )
 from core.config.helpers import discover_config_files
 from core.config.constants import ConfigType, TestsConfigSubtype
-from core.schemas.configs.tests_config import BaseTestsConfig
+from schemas.configs.tests_config import BaseTestsConfig
 
 from structlog import get_logger
 logger = get_logger(__name__)

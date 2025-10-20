@@ -4,7 +4,7 @@ import wandb
 from pydantic import BaseModel
 from wandb import Table
 
-from core.schemas.data.pipeline import PipelineData
+from schemas import PipelineData
 
 DEFAULT_FIELDS = ["page_number", "parish", "deanery", "dedication", "building_material"]
 

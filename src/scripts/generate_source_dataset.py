@@ -7,7 +7,6 @@ from dotenv import load_dotenv
 from omegaconf import DictConfig
 from sqlalchemy import create_engine
 
-import core.schemas.configs  # type: ignore
 from core.config.constants import ConfigType, DatasetConfigSubtype, ModelsConfigSubtype
 from core.config.helpers import with_configs
 from core.data.filters import filter_schematisms, filter_empty_samples

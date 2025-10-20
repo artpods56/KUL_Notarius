@@ -77,8 +77,6 @@ from dataclasses import dataclass
 from tqdm import tqdm
 from structlog import get_logger
 
-import core.schemas.configs  # type: ignore
-
 from core.models.base import ConfigurableModel, ModelConfigMap
 from core.pipeline.steps.base import (
     ProcessingStep,
@@ -88,7 +86,7 @@ from core.pipeline.steps.base import (
 )
 from itertools import chain
 
-from core.schemas.data.pipeline import PipelineData
+from schemas import PipelineData
 
 logger = get_logger(__name__)
 

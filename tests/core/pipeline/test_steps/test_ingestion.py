@@ -7,7 +7,7 @@ metadata.
 """
 
 from pathlib import Path
-from unittest.mock import patch, mock_open, MagicMock
+from unittest.mock import patch, mock_open
 
 import pytest
 from PIL import Image
@@ -20,7 +20,7 @@ from core.pipeline.steps.ingestion import (
     TextFileIngestionStep,
     PdfFileIngestionStep,
 )
-from core.schemas.data.pipeline import PipelineData
+from schemas import PipelineData
 
 
 class TestImageFileIngestionStep:

@@ -8,8 +8,8 @@ from typing import Optional, Any
 
 from core.data.translation_parser import Parser
 from core.pipeline.steps.base import DatasetProcessingStep
-from core.schemas.data.pipeline import PipelineData
-from core.schemas.data.schematism import SchematismPage
+from schemas import PipelineData
+from schemas.data.schematism import SchematismPage
 
 
 

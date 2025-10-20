@@ -1,13 +1,5 @@
-import os
-from datetime import datetime
-
-import warnings
-import wandb
 from dotenv import load_dotenv
 from omegaconf import DictConfig
-from sqlalchemy import create_engine
-
-import core.schemas.configs  # type: ignore
 
 from core.data.filters import filter_schematisms, filter_empty_samples
 from core.config.constants import ConfigType, DatasetConfigSubtype, ModelsConfigSubtype
@@ -19,17 +11,12 @@ from core.models.ocr.model import OcrModel
 from core.pipeline.pipeline import (
     IngestionPhase,
     Pipeline,
-    SampleProcessingPhase,
     DatasetProcessingPhase,
 )
 from core.pipeline.steps.export import (
-    SaveDataFrameStep,
-    AppendDataFrameToSQLStep,
     DownloadSamplesStep,
 )
 from core.pipeline.steps.ingestion import (
-    ImageFileIngestionStep,
-    TextFileIngestionStep,
     HuggingFaceIngestionStep,
     FilterMapSpec,
 )

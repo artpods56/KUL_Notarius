@@ -11,7 +11,6 @@ from core.utils.shared import PDF_SOURCE_DIR
 from core.config.constants import ConfigType, ConfigSubTypes
 from core.config.manager import get_config_manager
 
-import core.schemas.configs # type: ignore
 
 class PdfFilesResource(ConfigurableResource):
     pdf_dir: str = str(PDF_SOURCE_DIR)
@@ -20,20 +19,23 @@ class PdfFilesResource(ConfigurableResource):
         return list(Path(self.pdf_dir).glob("**/*.pdf"))
 
 
-config_manager: ConfigManager = get_config_manager()
+# config_manager: ConfigManager = get_config_manager()
 
 
 class ConfigManagerResource(ConfigurableResource):
+    config_manager: ClassVar[ConfigManager] = get_config_manager()
 
     def load_config(
         self, config_name: str, config_type: ConfigType, config_subtype: ConfigSubTypes
     ) -> DictConfig:
-        return config_manager.load_config(config_name, config_type, config_subtype)
+        return self.config_manager.load_config(config_name, config_type, config_subtype)
+
+    def load_config_from_string(self, config_name: str, config_type_name: str, config_subtype_name: str) -> DictConfig:
+        return self.config_manager.load_config_from_string(config_name, config_type_name, config_subtype_name)
 
 
 from dagster import ConfigurableResource
 from typing import Any, Callable, Literal, ClassVar
-import json
 
 OpType = Literal["filter", "map"]
 OpRegistryType = dict[tuple[OpType, str], Callable[[Any], Any]]

@@ -97,6 +97,16 @@ class ConfigManager:
             self._configs[cache_key] = validated_config
             return validated_config
 
+    def load_config_from_string(self, config_name: str, config_type_name: str, config_subtype_name: str):
+
+        type_enum = ConfigType(config_type_name)
+        subtype = ConfigTypeMapping.get_subtype_enum(type_enum)
+        subtype_enum = subtype(config_subtype_name)
+
+        return self.load_config(config_name, type_enum, subtype_enum)
+
+
+
     @validate_config_arguments
     def _generate_default_config(self, config_type: ConfigType, config_subtype: ConfigSubTypes) -> DictConfig:
         """Generate default configuration for a given config type and subtype."""

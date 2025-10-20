@@ -8,7 +8,6 @@ initial setup is performed before generating configurations.
 from structlog import get_logger
 from dotenv import load_dotenv
 
-import core.schemas.configs # type: ignore we need to import this to register configs
 from core.utils.shared import CONFIGS_DIR
 from core.config.manager import ConfigManager
 from core.utils.logging import setup_logging

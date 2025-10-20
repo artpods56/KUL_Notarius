@@ -7,7 +7,7 @@ import pytesseract
 from structlog import get_logger
 
 from core.caches.ocr_cache import PyTesseractCache
-from core.schemas.data.cache import PyTesseractCacheItem
+from schemas import PyTesseractCacheItem
 
 from core.caches.utils import get_image_hash
 

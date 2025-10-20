@@ -1,13 +1,13 @@
 """Tests for preprocessing steps like language detection."""
 from core.pipeline.steps.prediction import LanguageDetectionStep
-from core.schemas.data.schematism import SchematismPage
+from schemas.data.schematism import SchematismPage
 import pytest
 from PIL import Image
 import numpy as np
 from unittest.mock import patch
 
 
-from core.schemas.data.pipeline import PipelineData
+from schemas import PipelineData
 from core.models.ocr.model import OcrModel
 
 from tests.conftest import sample_page_data

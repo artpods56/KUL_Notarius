@@ -1,19 +1,13 @@
 import random
-from typing import Any
+from typing import Any, cast
 
 from dagster import AssetExecutionContext, MetadataValue
 from datasets import Dataset
 from omegaconf import OmegaConf
 from pymupdf import pymupdf
 
-from core.config.constants import (
-    ConfigType,
-    ConfigSubTypes,
-    DatasetConfigSubtype,
-    ConfigTypeMapping,
-)
 from core.data.utils import get_dataset
-from core.schemas.data.pipeline import GroundTruthDataItem, BaseDataItem
+from schemas.data.pipeline import BaseDataItem
 import dagster as dg
 
 from orchestration.resources import PdfFilesResource, ConfigManagerResource
@@ -78,17 +72,20 @@ class DatasetConfig(dg.Config):
 @dg.asset(group_name="data", compute_kind="python")
 def huggingface_dataset(context: AssetExecutionContext, config: DatasetConfig, config_manager: ConfigManagerResource) -> Dataset:
 
-    type_enum = ConfigType(config.config_type_name)
-    subtype = ConfigTypeMapping.get_subtype_enum(type_enum)
-    subtype_enum = subtype(config.config_subtype_name)
+    # type_enum = ConfigType(config.config_type_name)
+    # subtype = ConfigTypeMapping.get_subtype_enum(type_enum)
+    # subtype_enum = subtype(config.config_subtype_name)
 
-    dataset_config = config_manager.load_config(
+    dataset_config = config_manager.load_config_from_string(
         config_name=config.config_name,
-        config_type=type_enum,
-        config_subtype=subtype_enum,
+        config_type_name=config.config_type_name,
+        config_subtype_name=config.config_subtype_name
     )
 
     dataset = get_dataset(dataset_config)
+
+    dataset = dataset.add_column("sample_id", range(len(dataset)))
+
 
     context.add_asset_metadata({
         "config_name": MetadataValue.text(config.config_name),
@@ -97,13 +94,25 @@ def huggingface_dataset(context: AssetExecutionContext, config: DatasetConfig, c
         "dataset_config": MetadataValue.json(OmegaConf.to_container(dataset_config, resolve=True)),
     })
 
+    random_sample = cast(
+        Dataset,
+        dataset
+    )[
+        random.randint(0, len(dataset) - 1)
+    ]
 
-    dataset = dataset.remove_columns(dataset_config.column_map.get("image_column", "image"))
+    context.add_output_metadata(
+        {
+            "len": MetadataValue.int(len(dataset)),
+            "random_sample": MetadataValue.json(
+                {
+                    k: v for k, v in random_sample.items() if k != "image"
+                }
+            ),
+        }
+    )
 
-    context.add_output_metadata({
-        "len": MetadataValue.int(len(dataset)),
-        "random_sample": MetadataValue.json(dataset[random.randrange(0, len(dataset))]),
-    })
+
 
     return dataset
 

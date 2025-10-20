@@ -1,5 +1,3 @@
-from io import BytesIO
-
 import pymupdf
 
 from dataclasses import dataclass
@@ -14,12 +12,11 @@ from typing import (
 
 from PIL import Image
 from omegaconf import DictConfig
-from tqdm import tqdm
 
 from core.data.utils import get_dataset
 from core.pipeline.steps.base import IngestionProcessingStep
-from core.schemas.data.pipeline import PipelineData
-from core.schemas.data.schematism import SchematismPage
+from schemas import PipelineData
+from schemas.data.schematism import SchematismPage
 
 
 ImageFileExtension = Literal[".jpg", ".jpeg", ".png"]
