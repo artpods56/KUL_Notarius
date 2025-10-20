@@ -42,7 +42,6 @@ from core.pipeline.steps.prediction import (
 )
 from core.pipeline.steps.wrappers import (
     HuggingFaceToPipelineDataStep,
-    ToPandasDataFrameStep,
     DataFrameSchemaMappingStep,
 )
 from core.utils.logging import setup_logging
@@ -161,7 +160,7 @@ def main(
         steps=[
             OCRStep(pipeline.get_model(OcrModel), force_ocr=False),
             # LanguageDetectionStep(languages),
-            # LMv3PredictionStep(pipeline.get_model(LMv3Model)),
+            LMv3PredictionStep(pipeline.get_model(LMv3Model)),
             LLMPredictionStep(
                 pipeline.get_model(LLMModel),
                 system_prompt="system.j2",
@@ -175,9 +174,9 @@ def main(
     processing_phase = DatasetProcessingPhase(
         name="processing",
         steps=[
-            # DeaneryFillingStep(
-            #     sources=["source_ground_truth", "ground_truth", "llm_prediction"]
-            # ),
+            DeaneryFillingStep(
+                sources=["source_ground_truth", "ground_truth", "llm_prediction"]
+            ),
             EntriesParsingStep(),
         ],
         description="Filling deanery names between sample entries and parsing them.",

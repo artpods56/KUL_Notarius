@@ -75,3 +75,5 @@ INPUTS_DIR = DATA_DIR / "inputs"
 OUTPUTS_DIR = DATA_DIR / "outputs"
 
 MAPPINGS_DIR = DATA_DIR / "mappings"
+
+PDF_SOURCE_DIR = INPUTS_DIR / "pdfs"

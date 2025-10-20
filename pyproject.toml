@@ -48,6 +48,11 @@ dependencies = [
     "respx>=0.22.0",
     "llama-cpp-python>=0.3.16",
     "black>=25.9.0",
+    "dagster>=1.11.15",
+    "dagster-webserver>=1.11.15",
+    "datasets>=4.2.0",
+    "pyodbc>=5.3.0",
+    "reportlab>=4.4.4",
 ]
 
 [project.optional-dependencies]
@@ -63,8 +68,8 @@ package-dir = {"" = "src"}
 where = ["src"]
 
 [tool.dagster]
-module_name = "src.orchestration.assets.data"
-attribute = "definitions"
+module_name = "orchestration.definitions"
+code_location_name = "ai_osrodek"
 
 
 [dependency-groups]

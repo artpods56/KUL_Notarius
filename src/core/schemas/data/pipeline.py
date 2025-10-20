@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from typing import Any, Dict, Literal
 
 from PIL.Image import Image
@@ -13,6 +15,25 @@ PageDataSourceField = Literal[
     "llm_prediction",
     "parsed_prediction",
 ]
+
+class BaseMetaData(BaseModel):
+    sample_id: str = Field(description="Sample ID")
+
+class BaseDataItem(BaseModel):
+    image: Image | None = Field(default=None, description="Image used for prediction.")
+    text: str | None = Field(default=None, description="OCR text extracted from image.")
+
+    metadata: BaseMetaData | None = Field(default=None, description="Metadata of the dataset item")
+
+    class Config:
+        arbitrary_types_allowed = True
+
+class GroundTruthDataItem(BaseDataItem):
+    ground_truth: SchematismPage = Field(description="Ground truth page")
+
+class PredictionDataItem(BaseDataItem):
+    prediction: SchematismPage = Field(description="Prediction page")
+
 
 
 class PipelineData(BaseModel):
