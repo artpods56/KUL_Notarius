@@ -4,7 +4,7 @@ import structlog
 from wandb import Run
 
 from core.pipeline.steps.base import DatasetProcessingStep
-from schemas import PipelineData
+from schemas.data.pipeline  import PipelineData
 from core.utils.wandb_eval import (
     add_eval_row,
     create_eval_table,

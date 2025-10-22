@@ -9,7 +9,7 @@ import pandas as pd
 from core.pipeline.steps.base import DatasetProcessingStep, IngestionProcessingStep
 from core.pipeline.steps.export import SaveDataFrameStep
 from core.pipeline.steps.ingestion import HuggingFaceIngestionStep
-from schemas import PipelineData, PageDataSourceField
+from schemas.data.pipeline import PipelineData, PageDataSourceField
 from schemas.data.schematism import SchematismPage, SchematismEntry
 
 

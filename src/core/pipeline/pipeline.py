@@ -86,7 +86,7 @@ from core.pipeline.steps.base import (
 )
 from itertools import chain
 
-from schemas import PipelineData
+from schemas.data.pipeline import PipelineData
 
 logger = get_logger(__name__)
 
