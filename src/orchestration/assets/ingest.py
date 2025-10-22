@@ -1,3 +1,7 @@
+"""
+Configs for assets defined in this file lives in [[ingestion_config.py]]
+"""
+
 import random
 from typing import Any, cast
 
@@ -7,11 +11,12 @@ from omegaconf import OmegaConf
 from pymupdf import pymupdf
 
 from core.data.utils import get_dataset
+from orchestration.configs.shared import ConfigReference
 from schemas.data.pipeline import BaseDataItem
 import dagster as dg
 
 from orchestration.resources import PdfFilesResource, ConfigManagerResource
-
+from orchestration.constants import DataSource, AssetLayer, ResourceGroup, Kinds
 
 from structlog import get_logger
 
@@ -23,8 +28,14 @@ class PdfToDatasetConfig(dg.Config):
     modes: list[str] = ["image", "text"]
 
 
-@dg.asset()
-def pdf_to_dataset(config: PdfToDatasetConfig, pdf_files: PdfFilesResource) -> list[BaseDataItem]:
+@dg.asset(
+    key_prefix=[AssetLayer.STG, DataSource.FILE],
+    group_name=ResourceGroup.DATA,
+    kinds={Kinds.PYTHON},
+)
+def raw__pdf__dataset(
+    config: PdfToDatasetConfig, pdf_files: PdfFilesResource
+) -> list[BaseDataItem]:
 
     page_range = config.page_range
     modes = config.modes
@@ -49,7 +60,7 @@ def pdf_to_dataset(config: PdfToDatasetConfig, pdf_files: PdfFilesResource) -> l
                     text = page.get_text()
                     item_data["text"] = text
 
-                elif "image" in modes:
+                if "image" in modes:
 
                     pix = page.get_pixmap()
                     image = pix.pil_image()
@@ -63,58 +74,52 @@ def pdf_to_dataset(config: PdfToDatasetConfig, pdf_files: PdfFilesResource) -> l
     return items
 
 
-class DatasetConfig(dg.Config):
-    config_name: str
-    config_type_name: str
-    config_subtype_name: str
+"""
+
+"""
 
 
-@dg.asset(group_name="data", compute_kind="python")
-def huggingface_dataset(context: AssetExecutionContext, config: DatasetConfig, config_manager: ConfigManagerResource) -> Dataset:
-
-    # type_enum = ConfigType(config.config_type_name)
-    # subtype = ConfigTypeMapping.get_subtype_enum(type_enum)
-    # subtype_enum = subtype(config.config_subtype_name)
+@dg.asset(
+    key_prefix=[AssetLayer.STG, DataSource.HUGGINGFACE],
+    group_name=ResourceGroup.DATA,
+    kinds={Kinds.PYTHON, Kinds.HUGGINGFACE},
+)
+def raw__hf__dataset(
+    context: AssetExecutionContext,
+    config: ConfigReference,
+    config_manager: ConfigManagerResource,
+) -> Dataset:
 
     dataset_config = config_manager.load_config_from_string(
         config_name=config.config_name,
         config_type_name=config.config_type_name,
-        config_subtype_name=config.config_subtype_name
+        config_subtype_name=config.config_subtype_name,
     )
 
     dataset = get_dataset(dataset_config)
 
     dataset = dataset.add_column("sample_id", range(len(dataset)))
 
+    context.add_asset_metadata(
+        {
+            "config_name": MetadataValue.text(config.config_name),
+            "config_type_name": MetadataValue.text(config.config_type_name),
+            "config_subtype_name": MetadataValue.text(config.config_subtype_name),
+            "dataset_config": MetadataValue.json(
+                OmegaConf.to_container(dataset_config, resolve=True)
+            ),
+        }
+    )
 
-    context.add_asset_metadata({
-        "config_name": MetadataValue.text(config.config_name),
-        "config_type_name": MetadataValue.text(config.config_type_name),
-        "config_subtype_name": MetadataValue.text(config.config_subtype_name),
-        "dataset_config": MetadataValue.json(OmegaConf.to_container(dataset_config, resolve=True)),
-    })
-
-    random_sample = cast(
-        Dataset,
-        dataset
-    )[
-        random.randint(0, len(dataset) - 1)
-    ]
+    random_sample = cast(Dataset, dataset)[random.randint(0, len(dataset) - 1)]
 
     context.add_output_metadata(
         {
             "len": MetadataValue.int(len(dataset)),
             "random_sample": MetadataValue.json(
-                {
-                    k: v for k, v in random_sample.items() if k != "image"
-                }
+                {k: v for k, v in random_sample.items() if k != "image"}
             ),
         }
     )
 
-
-
     return dataset
-
-
-
