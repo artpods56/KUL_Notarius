@@ -45,6 +45,8 @@ from core.pipeline.steps.wrappers import (
 from core.utils.logging import setup_logging
 from core.utils.shared import TMP_DIR
 
+import schemas.configs # type: ignore
+
 setup_logging()
 
 import structlog
@@ -54,16 +56,6 @@ logger = structlog.get_logger(__name__)
 envs = load_dotenv()
 if not envs:
     logger.warning("No environment variables loaded.")
-
-PG_USER = os.getenv("PG_USER")
-PG_PASSWORD = os.getenv("PG_PASSWORD")
-PG_HOST = os.getenv("PG_HOST")
-PG_PORT = os.getenv("PG_PORT")
-PG_NAME = os.getenv("PG_NAME")
-
-sql_engine = create_engine(
-    f"postgresql+psycopg2://{PG_USER}:{PG_PASSWORD}@{PG_HOST}:{PG_PORT}/{PG_NAME}"
-)
 
 wandb_run = wandb.init(
     project="ai-osrodek",
@@ -205,7 +197,7 @@ def main(
     export_phase = DatasetProcessingPhase(
         name="export",
         steps=[
-            ToPandasDataFrameStep(source="parsed"),
+            # ToPandasDataFrameStep(source="parsed"),
             SaveDataFrameStep(
                 file_path=TMP_DIR / "saved.csv", file_format="csv", overwrite=True
             ),
@@ -224,14 +216,6 @@ def main(
                 file_format="csv",
                 overwrite=True,
             ),
-            # AppendDataFrameToSQLStep(
-            #     table_name="dane_hasla",
-            #     connection=create_engine(
-            #         f"postgresql+psycopg2://{PG_USER}:{PG_PASSWORD}@{PG_HOST}:{PG_PORT}/{PG_NAME}"
-            #     ),
-            #     if_exists="append",
-            #     use_columns=["parafia", "dekanat", "wezwanie", "material", "strona_p"],
-            # ),
         ],
         description="Exporting the data to file and database.",
         depends_on=logging_phase,
