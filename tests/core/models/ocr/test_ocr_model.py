@@ -9,9 +9,9 @@ from PIL import Image
 from core.models.ocr.model import OcrModel
 
 @pytest.fixture()
-def ocr_model():
+def ocr_model(ocr_model_config):
     """Create an ``OcrModel`` with cache directory pointing to *tmp_path*."""
-    return OcrModel(enable_cache=True, language="eng")
+    return OcrModel(config=ocr_model_config, enable_cache=True, language="eng")
 
 class TestOcrModel:
     """Unit tests for the OcrModel class."""
