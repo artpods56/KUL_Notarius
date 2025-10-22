@@ -20,7 +20,7 @@ import sqlalchemy
 from sqlalchemy import Engine
 
 from core.pipeline.steps.base import DatasetProcessingStep
-from schemas import PipelineData
+from schemas.data.pipeline import PipelineData
 from schemas.data.schematism import SchematismPage
 from core.utils.shared import TMP_DIR, OUTPUTS_DIR
 

@@ -15,7 +15,7 @@ from omegaconf import DictConfig
 
 from core.data.utils import get_dataset
 from core.pipeline.steps.base import IngestionProcessingStep
-from schemas import PipelineData
+from schemas.data.pipeline import PipelineData
 from schemas.data.schematism import SchematismPage
 
 

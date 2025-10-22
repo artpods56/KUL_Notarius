@@ -14,7 +14,7 @@ from core.models.llm.model import LLMModel
 from core.models.lmv3.model import LMv3Model
 from core.models.ocr.model import OcrModel
 from core.pipeline.steps.base import SampleProcessingStep
-from schemas import PipelineData
+from schemas.data.pipeline import PipelineData
 from schemas.data.schematism import SchematismPage
 
 

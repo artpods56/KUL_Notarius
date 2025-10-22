@@ -12,7 +12,7 @@ from core.models.base import ConfigurableModel
 from core.models.llm.factory import llm_provider_factory
 from core.models.llm.prompt_manager import PromptManager
 from core.models.llm.utils import messages_to_string
-from schemas import LLMCacheItem
+from schemas.data.cache import LLMCacheItem
 
 logger = get_logger(__name__)
 

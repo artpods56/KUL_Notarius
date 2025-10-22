@@ -12,8 +12,8 @@ from structlog import get_logger
 from core.caches.lmv3_cache import LMv3Cache
 from core.caches.utils import get_image_hash
 from core.data.parsing import build_page_json, repair_bio_labels
-from schemas import LMv3CacheItem
 from core.utils.inference_utils import get_model_and_processor, retrieve_predictions
+from schemas.data.cache import LMv3CacheItem
 
 logger = get_logger(__name__)
 
