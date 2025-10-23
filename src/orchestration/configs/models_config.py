@@ -4,7 +4,7 @@ from orchestration.constants import DataSource, AssetLayer
 from orchestration.utils import AssetKeyHelper
 
 """
-Asset: [[models.py#ocr_model__model]]
+Asset: [[models.py#ocr_model]]
 Defined in: src/orchestration/assets/configs.py
 Resolves to: res__ocr_model
 """
