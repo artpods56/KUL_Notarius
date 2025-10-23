@@ -5,9 +5,9 @@ Configs for assets defined in this file lives in [[ingestion_config.py]]
 import random
 from typing import Any, cast
 
-from dagster import AssetExecutionContext, MetadataValue
+from dagster import AssetExecutionContext, MetadataValue, AssetIn
 from datasets import Dataset
-from omegaconf import OmegaConf
+from omegaconf import OmegaConf, DictConfig
 from pymupdf import pymupdf
 
 from core.data.utils import get_dataset
@@ -83,33 +83,15 @@ def raw__pdf__dataset(
     key_prefix=[AssetLayer.STG, DataSource.HUGGINGFACE],
     group_name=ResourceGroup.DATA,
     kinds={Kinds.PYTHON, Kinds.HUGGINGFACE},
+    ins={"dataset_config": AssetIn(key=[AssetLayer.RES, "hf_dataset__config"])},
 )
 def raw__hf__dataset(
-    context: AssetExecutionContext,
-    config: ConfigReference,
-    config_manager: ConfigManagerResource,
+    context: AssetExecutionContext, dataset_config: DictConfig
 ) -> Dataset:
-
-    dataset_config = config_manager.load_config_from_string(
-        config_name=config.config_name,
-        config_type_name=config.config_type_name,
-        config_subtype_name=config.config_subtype_name,
-    )
 
     dataset = get_dataset(dataset_config)
 
     dataset = dataset.add_column("sample_id", range(len(dataset)))
-
-    context.add_asset_metadata(
-        {
-            "config_name": MetadataValue.text(config.config_name),
-            "config_type_name": MetadataValue.text(config.config_type_name),
-            "config_subtype_name": MetadataValue.text(config.config_subtype_name),
-            "dataset_config": MetadataValue.json(
-                OmegaConf.to_container(dataset_config, resolve=True)
-            ),
-        }
-    )
 
     random_sample = cast(Dataset, dataset)[random.randint(0, len(dataset) - 1)]
 
