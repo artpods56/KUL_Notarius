@@ -14,37 +14,48 @@ PageDataSourceField = Literal[
     "parsed_prediction",
 ]
 
+
 class BaseMetaData(BaseModel):
     sample_id: int = Field(description="Sample ID")
     schematism_name: str = Field(description="Schematism name")
     filename: str = Field(description="Schematism filename")
 
+
 class BaseDataItem(BaseModel):
     image: Image | None = Field(default=None, description="Image used for prediction.")
     text: str | None = Field(default=None, description="OCR text extracted from image.")
 
-    metadata: BaseMetaData | None = Field(default=None, description="Metadata of the dataset item")
+    metadata: BaseMetaData | None = Field(
+        default=None, description="Metadata of the lmv3_dataset item"
+    )
 
     class Config:
         arbitrary_types_allowed = True
 
+
 class HasGroundTruthMixin(BaseModel):
     ground_truth: SchematismPage = Field(description="Ground truth page")
 
-class HasPredictionMixin(BaseModel):
-    prediction: SchematismPage = Field(description="Prediction page")
+
+class HasPredictionsMixin(BaseModel):
+    predictions: SchematismPage = Field(description="Prediction page")
+
 
 class GroundTruthDataItem(BaseDataItem, HasGroundTruthMixin):
     pass
 
-class PredictionDataItem(BaseDataItem, HasPredictionMixin):
+
+class PredictionDataItem(BaseDataItem, HasPredictionsMixin):
     pass
 
-class EvaluationDataItem(BaseDataItem, HasGroundTruthMixin, HasPredictionMixin):
+
+class EvaluationDataItem(BaseDataItem, HasGroundTruthMixin):
     pass
+
 
 class BaseDataset[ItemT: BaseDataItem](BaseModel):
     items: list[ItemT] = Field(description="List of items")
+
 
 class PipelineData(BaseModel):
     """
