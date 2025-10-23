@@ -8,10 +8,11 @@ from omegaconf import DictConfig
 from core.config.constants import DatasetConfigSubtype, ModelsConfigSubtype
 from core.config.manager import ConfigManager, ConfigType
 from core.pipeline.pipeline import Pipeline
-from schemas import PipelineData
+from schemas.data.pipeline import PipelineData
 from schemas.data.schematism import SchematismPage
 from core.utils.shared import CONFIGS_DIR
 
+import schemas.configs #type: ignore
 
 @pytest.fixture(scope="session", autouse=True)
 def _load_dotenv_once_for_everybody() -> None:
@@ -52,6 +53,13 @@ def lmv3_model_config(config_manager) -> DictConfig:
         config_type=ConfigType.MODELS,
         config_subtype=ModelsConfigSubtype.LMV3,
     )
+@pytest.fixture(scope="session")
+def ocr_model_config(config_manager) -> DictConfig:
+    return config_manager.load_config(
+        config_name="ocr_model_config",
+        config_type=ConfigType.MODELS,
+        config_subtype=ModelsConfigSubtype.OCR,
+    )
 
 
 @pytest.fixture(scope="session")
@@ -78,7 +86,9 @@ def sample_structured_response() -> str:
 
 @pytest.fixture
 def sample_pil_image():
-    pil_image = Image.open("tests/sample_data/0056.jpg")
+    """Generate a synthetic PIL image for testing instead of loading from file."""
+    # Create a synthetic image with some text-like patterns
+    pil_image = Image.new('RGB', (800, 600), color='white')
     return pil_image
 
 

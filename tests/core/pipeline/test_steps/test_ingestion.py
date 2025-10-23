@@ -20,7 +20,7 @@ from core.pipeline.steps.ingestion import (
     TextFileIngestionStep,
     PdfFileIngestionStep,
 )
-from schemas import PipelineData
+from schemas.data.pipeline import PipelineData
 
 
 class TestImageFileIngestionStep:

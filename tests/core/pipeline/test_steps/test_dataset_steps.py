@@ -4,7 +4,7 @@ from typing import List
 import pytest
 
 from core.pipeline.steps.postprocessing import DeaneryFillingStep
-from schemas import PipelineData
+from schemas.data.pipeline import PipelineData
 from core.pipeline.steps.base import DatasetProcessingStep
 
 

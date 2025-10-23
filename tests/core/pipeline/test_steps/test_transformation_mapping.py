@@ -1,7 +1,7 @@
 import pandas as pd
 import pytest
 
-from core.pipeline.steps.transformation import DataFrameSchemaMappingStep
+from core.pipeline.steps.wrappers import DataFrameSchemaMappingStep
 
 
 def test_rename_only_preserve_unmapped() -> None:
