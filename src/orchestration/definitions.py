@@ -10,6 +10,11 @@ from orchestration.configs.prediction_config import (
     LMV3_ENRICHED_DATASET_OP_CONFIG,
     LLM_ENRICHED_DATASET_OP_CONFIG,
 )
+from orchestration.configs.postprocessing_config import (
+    DEANERY_FILLED_DATASET_OP_CONFIG,
+    PARSED_DATASET_OP_CONFIG,
+    GT_ALIGNED_DATASET_OP_CONFIG,
+)
 from orchestration.configs.references_config import (
     RES_HF_DATASET_CONFIG_OP_CONFIG,
     RES_OCR_MODEL_CONFIG_OP_CONFIG,
@@ -18,7 +23,10 @@ from orchestration.configs.references_config import (
 )
 from orchestration.configs.transformation_config import (
     FILTERED_HF_DATASET_OP_CONFIG,
-    GT_DATASET_PYDANTIC_OP_CONFIG,
+    GT_SOURCE_DATASET_PYDANTIC_OP_CONFIG,
+    BASE_DATASET_PYDANTIC_OP_CONFIG,
+    GT_PARSED_DATASET_PYDANTIC_OP_CONFIG,
+    EVAL_ALIGNED_DATAFRAME_PANDAS_OP_CONFIG,
 )
 from orchestration.configs.models_config import RES_OCR_MODEL_OP_CONFIG
 
@@ -36,7 +44,10 @@ from orchestration.assets.ingest import (
 
 from orchestration.assets.transform import (
     filtered__hf__dataset,
-    gt__dataset__pydantic,
+    base__dataset__pydantic,
+    gt__source_dataset__pydantic,
+    gt__parsed_dataset__pydantic,
+    eval__aligned_dataframe__pandas,
 )
 
 from orchestration.assets.predict import (
@@ -45,9 +56,15 @@ from orchestration.assets.predict import (
     llm_enriched__dataset,
 )
 
+from orchestration.assets.postprocess import (
+    deanery_filled__dataset,
+    parsed__dataset,
+    gt_aligned__dataset,
+)
+
 from orchestration.assets.configs import ocr_model__config
 
-from orchestration.assets.models import ocr_model, lmv3_model, llm_model
+from orchestration.assets.models import ocr_model, lmv3_model, llm_model, parser
 
 import core.data.filters  # type: ignore
 import schemas.configs  # type: ignore
@@ -57,7 +74,13 @@ from orchestration.resources import PdfFilesResource, ConfigManagerResource
 
 
 dataset_config_assets = [hf_dataset__config]
-ingestion_assets = [raw__hf__dataset, filtered__hf__dataset, gt__dataset__pydantic]
+ingestion_assets = [
+    raw__hf__dataset,
+    filtered__hf__dataset,
+    gt__source_dataset__pydantic,
+    gt__parsed_dataset__pydantic,
+    base__dataset__pydantic,
+]
 ingestion_job = dg.define_asset_job(
     name="ingestion_pipeline",
     selection=dg.AssetSelection.assets(*dataset_config_assets, *ingestion_assets),
@@ -68,7 +91,9 @@ ingestion_job = dg.define_asset_job(
             # asset refs
             # **RAW_HF_DATASET_OP_CONFIG,
             **FILTERED_HF_DATASET_OP_CONFIG,
-            **GT_DATASET_PYDANTIC_OP_CONFIG,
+            **GT_SOURCE_DATASET_PYDANTIC_OP_CONFIG,
+            **GT_PARSED_DATASET_PYDANTIC_OP_CONFIG,
+            **BASE_DATASET_PYDANTIC_OP_CONFIG,
         }
     },
 )
@@ -78,8 +103,13 @@ models_config_assets = [
     lmv3_model__config,
     llm_model__config,
 ]
-models_assets = [ocr_model, lmv3_model, llm_model]
-prediction_assets = [ocr_enriched__dataset, lmv3_enriched__dataset, llm_enriched__dataset]
+models_assets = [ocr_model, lmv3_model, llm_model, parser]
+prediction_assets = [
+    ocr_enriched__dataset,
+    lmv3_enriched__dataset,
+    llm_enriched__dataset,
+]
+
 
 prediction_job = dg.define_asset_job(
     name="prediction_pipeline",
@@ -101,6 +131,27 @@ prediction_job = dg.define_asset_job(
     },
 )
 
+postprocessing_assets = [
+    deanery_filled__dataset,
+    parsed__dataset,
+    gt_aligned__dataset,
+    eval__aligned_dataframe__pandas,
+]
+
+postprocessing_job = dg.define_asset_job(
+    name="postprocessing_pipeline",
+    selection=dg.AssetSelection.assets(parser, *postprocessing_assets),
+    config={
+        "ops": {
+            # asset refs
+            **DEANERY_FILLED_DATASET_OP_CONFIG,
+            **PARSED_DATASET_OP_CONFIG,
+            **GT_ALIGNED_DATASET_OP_CONFIG,
+            **EVAL_ALIGNED_DATAFRAME_PANDAS_OP_CONFIG,
+        }
+    },
+)
+
 
 defs = dg.Definitions(
     assets=[
@@ -113,8 +164,10 @@ defs = dg.Definitions(
         *models_assets,
         # prediction
         *prediction_assets,
+        # postprocessing
+        *postprocessing_assets,
     ],
-    jobs=[ingestion_job, prediction_job],
+    jobs=[ingestion_job, prediction_job, postprocessing_job],
     resources={
         # "pdf_files": PdfFilesResource(),
         "config_manager": ConfigManagerResource(),

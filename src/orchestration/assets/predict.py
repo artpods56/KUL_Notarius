@@ -8,7 +8,12 @@ from core.models.llm.model import LLMModel
 from core.models.lmv3.model import LMv3Model
 from core.models.ocr.model import OcrModel
 from orchestration.constants import AssetLayer, ResourceGroup, DataSource, Kinds
-from schemas.data.pipeline import BaseDataset, GroundTruthDataItem, PredictionDataItem
+from schemas.data.pipeline import (
+    BaseDataset,
+    GroundTruthDataItem,
+    PredictionDataItem,
+    BaseDataItem,
+)
 
 
 class OcrConfig(dg.Config):
@@ -24,16 +29,16 @@ class OcrConfig(dg.Config):
         Kinds.PYDANTIC,
     },
     ins={
-        "dataset": AssetIn(key="gt__dataset__pydantic"),
+        "dataset": AssetIn(key="base__dataset__pydantic"),
         "ocr_model": AssetIn(key=[AssetLayer.RES, "ocr_model"]),
     },
 )
 def ocr_enriched__dataset(
     context: AssetExecutionContext,
-    dataset: BaseDataset[GroundTruthDataItem],
+    dataset: BaseDataset[BaseDataItem],
     ocr_model: OcrModel,
     config: OcrConfig,
-) -> BaseDataset[GroundTruthDataItem]:
+) -> BaseDataset[BaseDataItem]:
 
     ocr_executions = 0
 
@@ -83,13 +88,13 @@ class LMv3Config(dg.Config):
     group_name=ResourceGroup.DATA,
     kinds={Kinds.PYTHON, Kinds.PYDANTIC},
     ins={
-        "dataset": AssetIn(key="gt__dataset__pydantic"),
+        "dataset": AssetIn(key="base__dataset__pydantic"),
         "lmv3_model": AssetIn(key=[AssetLayer.RES, "lmv3_model"]),
     },
 )
 def lmv3_enriched__dataset(
     context: AssetExecutionContext,
-    dataset: BaseDataset[GroundTruthDataItem],
+    dataset: BaseDataset[BaseDataItem],
     lmv3_model: LMv3Model,
     config: LMv3Config,
 ) -> BaseDataset[PredictionDataItem]:
@@ -98,21 +103,21 @@ def lmv3_enriched__dataset(
 
     items: list[PredictionDataItem] = []
 
-    for gt_item in dataset.items:
+    for base_item in dataset.items:
 
-        if gt_item.image is None:
+        if base_item.image is None:
             continue
 
         predictions = lmv3_model.predict(
-            gt_item.image,
+            base_item.image,
             raw_predictions=config.raw_predictions,
         )
         lmv3_executions += 1
 
         prediction_item = PredictionDataItem(
-            image=gt_item.image,
-            text=gt_item.text,
-            metadata=gt_item.metadata,
+            image=base_item.image,
+            text=base_item.text,
+            metadata=base_item.metadata,
             predictions=predictions,
         )
 
@@ -158,7 +163,7 @@ class LLMConfig(dg.Config):
 def llm_enriched__dataset(
     context: AssetExecutionContext,
     lmv3_dataset: BaseDataset[PredictionDataItem],
-    ocr_dataset: BaseDataset[GroundTruthDataItem],
+    ocr_dataset: BaseDataset[BaseDataItem],
     llm_model: LLMModel,
     config: LLMConfig,
 ) -> BaseDataset[PredictionDataItem]:
@@ -194,7 +199,7 @@ def llm_enriched__dataset(
             # Update predictions with LLM response
             produced_item = PredictionDataItem(
                 image=lmv3_item.image,
-                text=lmv3_item.text,
+                text=ocr_item.text,
                 metadata=lmv3_item.metadata,
                 predictions=response,
             )

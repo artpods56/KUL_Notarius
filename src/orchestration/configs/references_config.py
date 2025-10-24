@@ -16,7 +16,7 @@ RES_HF_DATASET_CONFIG_OP_CONFIG = {
     AssetKeyHelper.build_key(AssetLayer.RES, "hf_dataset", "config"): {
         "config": ConfigReference(
             config_name="schematism_dataset_config",
-            config_type_name="lmv3_dataset",
+            config_type_name="dataset",
             config_subtype_name="evaluation",
         ).model_dump()
     }

@@ -126,3 +126,28 @@ llm_model = model_factory(
     model_class=LLMModel,
     extra_kwargs={"enable_cache": True},
 )
+
+
+@dg.asset(
+    key_prefix=[AssetLayer.RES],
+    group_name=ResourceGroup.MODEL,
+    kinds={Kinds.PYTHON},
+)
+def parser(context: AssetExecutionContext):
+    """Create a parser instance for translating/normalizing schematism entries.
+
+    This asset creates a Parser instance that can perform fuzzy matching
+    and translation of dedications, building materials, and deaneries.
+    """
+    from core.data.translation_parser import Parser
+
+    parser_instance = Parser()
+
+    context.add_asset_metadata(
+        {
+            "fuzzy_threshold": MetadataValue.int(parser_instance.fuzzy_threshold),
+            "mapping_keys": MetadataValue.json(list(parser_instance.mappings.keys())),
+        }
+    )
+
+    return parser_instance

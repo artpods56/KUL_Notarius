@@ -99,3 +99,18 @@ class OpRegistry(ConfigurableResource):
     def clear(cls) -> None:
         """Clear all registered operations. Useful for testing."""
         cls._ops_registry.clear()
+
+
+class ParserResource(ConfigurableResource):
+    """Resource for the translation parser.
+
+    This resource wraps the Parser class to make it available
+    as a Dagster resource that can be injected into assets.
+    """
+
+    fuzzy_threshold: int = 80
+
+    def get_parser(self):
+        """Get a parser instance with the configured threshold."""
+        from core.data.translation_parser import Parser
+        return Parser(fuzzy_threshold=self.fuzzy_threshold)

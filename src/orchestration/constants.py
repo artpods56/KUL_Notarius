@@ -11,6 +11,7 @@ class Kinds:
     PYTHON = "python"
     HUGGINGFACE = "huggingface"
     PYDANTIC = "pydantic"
+    PANDAS = "pandas"
     YAML = "yaml"
     JSON = "json"
 

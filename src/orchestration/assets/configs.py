@@ -47,7 +47,7 @@ def create_config_asset(asset_name: str, key_prefix: Sequence[str] = None):
     return _config_asset
 
 
-# --- lmv3_dataset configs ---
+# --- dataset configs ---
 hf_dataset__config = create_config_asset("hf_dataset__config")
 
 # --- model configs ---

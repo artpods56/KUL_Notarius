@@ -1,4 +1,8 @@
-from orchestration.assets.transform import OpConfig, DatasetMappingConfig
+from orchestration.assets.transform import (
+    OpConfig,
+    DatasetMappingConfig,
+    PandasDataFrameConfig,
+)
 from orchestration.constants import DataSource, AssetLayer
 from orchestration.utils import AssetKeyHelper
 
@@ -19,12 +23,45 @@ FILTERED_HF_DATASET_OP_CONFIG = {
     }
 }
 
+
 """
-Asset: [[transform.py#gt__dataset__pydantic]]
+Asset: [[transform.py#base__dataset__pydantic]]
 Defined in: src/orchestration/assets/transform.py
 """
-GT_DATASET_PYDANTIC_OP_CONFIG = {
+BASE_DATASET_PYDANTIC_OP_CONFIG = {
     AssetKeyHelper.build_prefixed_key(
-        AssetLayer.INT, DataSource.HUGGINGFACE, "gt", "dataset", "pydantic"
+        AssetLayer.INT, DataSource.HUGGINGFACE, "base", "dataset", "pydantic"
     ): {"config": DatasetMappingConfig().model_dump()}
+}
+
+
+"""
+Asset: [[transform.py#gt__source_dataset__pydantic]]
+Defined in: src/orchestration/assets/transform.py
+"""
+GT_SOURCE_DATASET_PYDANTIC_OP_CONFIG = {
+    AssetKeyHelper.build_prefixed_key(
+        AssetLayer.INT, DataSource.HUGGINGFACE, "gt", "source_dataset", "pydantic"
+    ): {"config": DatasetMappingConfig(ground_truth_source="source").model_dump()}
+}
+
+"""
+Asset: [[transform.py#gt__parsed_dataset__pydantic]]
+Defined in: src/orchestration/assets/transform.py
+"""
+GT_PARSED_DATASET_PYDANTIC_OP_CONFIG = {
+    AssetKeyHelper.build_prefixed_key(
+        AssetLayer.INT, DataSource.HUGGINGFACE, "gt", "parsed_dataset", "pydantic"
+    ): {"config": DatasetMappingConfig(ground_truth_source="parsed").model_dump()}
+}
+
+
+"""
+Asset: [[transform.py#eval__aligned_dataframe__pandas]]
+Defined in: src/orchestration/assets/transform.py
+"""
+EVAL_ALIGNED_DATAFRAME_PANDAS_OP_CONFIG = {
+    AssetKeyHelper.build_prefixed_key(
+        AssetLayer.FCT, DataSource.HUGGINGFACE, "eval", "aligned_dataframe", "pandas"
+    ): {"config": PandasDataFrameConfig().model_dump()}
 }

@@ -3,22 +3,93 @@ Configs for assets defined in this file lives in [[transformation_config.py]]
 """
 
 import random
-from typing import Literal, Any
+from typing import Literal, Any, Mapping
 
+import pandas as pd
 import dagster as dg
-from dagster import AssetExecutionContext, MetadataValue, AssetIn
+from dagster import (
+    AssetExecutionContext,
+    MetadataValue,
+    AssetIn,
+    TableSchema,
+)
 from datasets import Dataset
 
-from core.data.filters import get_op_registry, negate_op
+from core.data.filters import negate_op
 from orchestration.constants import DataSource, AssetLayer, ResourceGroup, Kinds
 from orchestration.resources import OpRegistry
 
 import structlog
 
 from schemas.data.dataset import BaseHuggingFaceDatasetSchema, ETLSpecificDatasetFields
-from schemas.data.pipeline import GroundTruthDataItem, BaseDataset, BaseMetaData
+from schemas.data.pipeline import (
+    GroundTruthDataItem,
+    BaseDataset,
+    BaseMetaData,
+    BaseDataItem,
+    GtAlignedPredictionDataItem,
+)
+from schemas.data.schematism import SchematismPage
 
 logger = structlog.get_logger(__name__)
+
+
+class PandasDataFrameConfig(dg.Config):
+    pass
+
+
+@dg.asset(
+    key_prefix=[AssetLayer.MRT, DataSource.HUGGINGFACE],
+    kinds={Kinds.PYTHON, Kinds.PANDAS},
+    group_name=ResourceGroup.DATA,
+    ins={"dataset": AssetIn("gt_aligned__dataset")},
+)
+def eval__aligned_dataframe__pandas(
+    context: AssetExecutionContext,
+    dataset: BaseDataset[GtAlignedPredictionDataItem],
+    config: PandasDataFrameConfig,
+):
+
+    rows = []
+
+    def flatten_aligned_pages(
+        aligned_pages: tuple[SchematismPage, SchematismPage],
+    ) -> dict[str, Any]:
+        flattened_pages_dict = {}
+
+        page_a, page_b = aligned_pages
+
+        for key in SchematismPage.model_fields().keys():
+            val_a = getattr(page_a, key)
+            val_b = getattr(page_b, key)
+
+            flattened_pages_dict.update({f"{key}_a": val_a, f"{key}_b": val_b})
+
+        return flattened_pages_dict
+
+    for item in dataset.items:
+
+        constructed_row = {
+            "sample_id": item.metadata.sample_id,
+            "filename": item.metadata.filename,
+            "schematism_name": item.metadata.schematism_name,
+            **flatten_aligned_pages(item.metadata.aligned_pages),
+        }
+
+        rows.append(constructed_row)
+
+    df = pd.DataFrame(rows)
+
+    column_schema = TableSchema.from_name_type_dict(df.dtypes.astype(str).to_dict())
+
+    return dg.MaterializeResult(
+        value=df,
+        metadata={
+            "dagster/table_name": "table",
+            "dagster/column_schema": column_schema,
+            "dagster/row_count": len(df),
+        },
+    )
 
 
 class OpConfig(dg.Config):
@@ -103,48 +174,104 @@ class DatasetMappingConfig(
     pass
 
 
-@dg.asset(
-    key_prefix=[AssetLayer.INT, DataSource.HUGGINGFACE],
-    group_name=ResourceGroup.DATA,
-    kinds={Kinds.PYTHON, Kinds.PYDANTIC},
-    ins={"dataset": AssetIn(key="filtered__hf__dataset")},
-)
-def gt__dataset__pydantic(
-    context: AssetExecutionContext,
-    dataset: Dataset,
-    config: DatasetMappingConfig,
-) -> BaseDataset[GroundTruthDataItem]:
+def pydantic_dataset_factory[ModelT: BaseDataItem](
+    asset_name: str, ins: Mapping[str, AssetIn], pydantic_model: type[ModelT]
+):
 
-    items: list[GroundTruthDataItem] = []
+    @dg.asset(
+        name=asset_name,
+        key_prefix=[AssetLayer.INT, DataSource.HUGGINGFACE],
+        group_name=ResourceGroup.DATA,
+        kinds={Kinds.PYTHON, Kinds.PYDANTIC},
+        ins=ins,
+    )
+    def _pydantic_dataset_asset(
+        context: AssetExecutionContext,
+        dataset: Dataset,
+        config: DatasetMappingConfig,
+    ):
+        """Convert HuggingFace dataset to Pydantic BaseDataset with BaseDataItem.
 
-    for sample in dataset:
+        This asset creates a base dataset containing only image and metadata,
+        without ground truth. It serves as the starting point for prediction
+        pipelines (OCR and LMv3 enrichment).
 
-        item = GroundTruthDataItem(
-            image=sample.get(config.image),
-            ground_truth=sample.get(config.source),
-            metadata=BaseMetaData(
-                sample_id=sample.get(config.sample_id),
-                schematism_name=sample.get(config.schematism_name),
-                filename=sample.get(config.filename),
-            ),
+        Args:
+            context: Dagster execution context for logging and metadata
+            dataset: HuggingFace dataset to convert
+            config: Configuration for field mappings
+
+        Returns:
+            BaseDataset containing BaseDataItem instances
+        """
+
+        items: list[BaseDataItem] = []
+
+        for sample in dataset:
+
+            item_structure = {
+                "image": sample.get(config.image),
+                "metadata": BaseMetaData(
+                    sample_id=sample.get(config.sample_id),
+                    schematism_name=sample.get(config.schematism_name),
+                    filename=sample.get(config.filename),
+                ),
+            }
+
+            if config.ground_truth_source is not None:
+                item_structure["ground_truth"] = sample.get(config.ground_truth_source)
+
+            item = pydantic_model(
+                **item_structure,
+            )
+
+            items.append(item)
+
+        random_sample = items[random.randint(0, len(items) - 1)]
+
+        context.add_asset_metadata(
+            {
+                "config": MetadataValue.json(config.model_dump()),
+            }
         )
 
-        items.append(item)
+        context.add_output_metadata(
+            {
+                "num_items": MetadataValue.int(len(items)),
+                "random_sample": MetadataValue.json(
+                    {
+                        k: v
+                        for k, v in random_sample.model_dump().items()
+                        if k != "image"
+                    }
+                ),
+            }
+        )
 
-    random_sample = items[random.randint(0, len(items) - 1)]
+        if pydantic_model is GroundTruthDataItem:
+            return BaseDataset[GroundTruthDataItem](items=items)
+        elif pydantic_model is BaseDataItem:
+            return BaseDataset[BaseDataItem](items=items)
+        else:
+            raise RuntimeError(f"Unsupported pydantic model type: {pydantic_model}")
 
-    context.add_asset_metadata(
-        {
-            "config": MetadataValue.json(config.model_dump()),
-        }
-    )
+    return _pydantic_dataset_asset
 
-    context.add_output_metadata(
-        {
-            "random_sample": MetadataValue.json(
-                {k: v for k, v in random_sample.model_dump().items() if k != "image"}
-            ),
-        }
-    )
 
-    return BaseDataset[GroundTruthDataItem](items=items)
+base__dataset__pydantic = pydantic_dataset_factory(
+    asset_name="base__dataset__pydantic",
+    ins={"dataset": AssetIn(key="filtered__hf__dataset")},
+    pydantic_model=BaseDataItem,
+)
+
+gt__source_dataset__pydantic = pydantic_dataset_factory(
+    asset_name="gt__source_dataset__pydantic",
+    ins={"dataset": AssetIn(key="filtered__hf__dataset")},
+    pydantic_model=GroundTruthDataItem,
+)
+
+gt__parsed_dataset__pydantic = pydantic_dataset_factory(
+    asset_name="gt__parsed_dataset__pydantic",
+    ins={"dataset": AssetIn(key="filtered__hf__dataset")},
+    pydantic_model=GroundTruthDataItem,
+)
