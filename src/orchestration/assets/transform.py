@@ -29,7 +29,7 @@ from schemas.data.pipeline import (
     BaseDataItem,
     GtAlignedPredictionDataItem,
 )
-from schemas.data.schematism import SchematismPage
+from schemas.data.schematism import SchematismPage, SchematismEntry
 
 logger = structlog.get_logger(__name__)
 
@@ -54,29 +54,36 @@ def eval__aligned_dataframe__pandas(
 
     def flatten_aligned_pages(
         aligned_pages: tuple[SchematismPage, SchematismPage],
-    ) -> dict[str, Any]:
-        flattened_pages_dict = {}
+    ) -> list[dict[str, Any]]:
+
+        flat_entries = []
 
         page_a, page_b = aligned_pages
 
-        for key in SchematismPage.model_fields().keys():
-            val_a = getattr(page_a, key)
-            val_b = getattr(page_b, key)
+        for entry_a, entry_b in zip(page_a.entries, page_b.entries):
+            flattened_pages_dict = {}
+            for key in SchematismEntry.model_fields.keys():
 
-            flattened_pages_dict.update({f"{key}_a": val_a, f"{key}_b": val_b})
+                val_a = getattr(entry_a, key)
+                val_b = getattr(entry_b, key)
 
-        return flattened_pages_dict
+                flattened_pages_dict.update({f"{key}_a": val_a, f"{key}_b": val_b})
+            flat_entries.append(flattened_pages_dict)
+
+        return flat_entries
 
     for item in dataset.items:
 
-        constructed_row = {
-            "sample_id": item.metadata.sample_id,
-            "filename": item.metadata.filename,
-            "schematism_name": item.metadata.schematism_name,
-            **flatten_aligned_pages(item.metadata.aligned_pages),
-        }
+        for flat_record in flatten_aligned_pages(item.aligned_schematism_pages):
 
-        rows.append(constructed_row)
+            constructed_row = {
+                "sample_id": item.metadata.sample_id,
+                "filename": item.metadata.filename,
+                "schematism_name": item.metadata.schematism_name,
+                **flat_record,
+            }
+
+            rows.append(constructed_row)
 
     df = pd.DataFrame(rows)
 
@@ -88,6 +95,7 @@ def eval__aligned_dataframe__pandas(
             "dagster/table_name": "table",
             "dagster/column_schema": column_schema,
             "dagster/row_count": len(df),
+            "preview": MetadataValue.md(df.head(30).to_markdown()),
         },
     )
 

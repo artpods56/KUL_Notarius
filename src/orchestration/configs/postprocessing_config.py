@@ -1,4 +1,8 @@
-from orchestration.assets.postprocess import DeaneryFillingConfig, ParsingConfig, JSONAlignmentConfig
+from orchestration.assets.postprocess import (
+    DeaneryFillingConfig,
+    ParsingConfig,
+    JSONAlignmentConfig,
+)
 from orchestration.configs.shared import ConfigReference
 from orchestration.constants import DataSource, AssetLayer
 from orchestration.utils import AssetKeyHelper
@@ -11,9 +15,7 @@ Resolves to: fct__huggingface__deanery_filled__dataset
 DEANERY_FILLED_DATASET_OP_CONFIG = {
     AssetKeyHelper.build_prefixed_key(
         AssetLayer.FCT, DataSource.HUGGINGFACE, "deanery_filled", "dataset"
-    ): {
-        "config": DeaneryFillingConfig().model_dump()
-    }
+    ): {"config": DeaneryFillingConfig().model_dump()}
 }
 
 """
@@ -24,9 +26,7 @@ Resolves to: fct__huggingface__parsed__dataset
 PARSED_DATASET_OP_CONFIG = {
     AssetKeyHelper.build_prefixed_key(
         AssetLayer.FCT, DataSource.HUGGINGFACE, "parsed", "dataset"
-    ): {
-        "config": ParsingConfig().model_dump()
-    }
+    ): {"config": ParsingConfig().model_dump()}
 }
 
 """
@@ -37,7 +37,5 @@ Resolves to: fct__huggingface__gt_aligned__dataset
 GT_ALIGNED_DATASET_OP_CONFIG = {
     AssetKeyHelper.build_prefixed_key(
         AssetLayer.FCT, DataSource.HUGGINGFACE, "gt_aligned", "dataset"
-    ): {
-        "config": JSONAlignmentConfig().model_dump()
-    }
+    ): {"config": JSONAlignmentConfig(ground_truth_source="parsed").model_dump()}
 }

@@ -62,6 +62,6 @@ Defined in: src/orchestration/assets/transform.py
 """
 EVAL_ALIGNED_DATAFRAME_PANDAS_OP_CONFIG = {
     AssetKeyHelper.build_prefixed_key(
-        AssetLayer.FCT, DataSource.HUGGINGFACE, "eval", "aligned_dataframe", "pandas"
+        AssetLayer.MRT, DataSource.HUGGINGFACE, "eval", "aligned_dataframe", "pandas"
     ): {"config": PandasDataFrameConfig().model_dump()}
 }
