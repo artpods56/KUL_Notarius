@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+from contextlib import contextmanager
+from os import write
 from pathlib import Path
 
+import pandas as pd
 from dagster import ConfigurableResource
 from omegaconf import DictConfig
 
@@ -30,8 +33,12 @@ class ConfigManagerResource(ConfigurableResource):
     ) -> DictConfig:
         return self.config_manager.load_config(config_name, config_type, config_subtype)
 
-    def load_config_from_string(self, config_name: str, config_type_name: str, config_subtype_name: str) -> DictConfig:
-        return self.config_manager.load_config_from_string(config_name, config_type_name, config_subtype_name)
+    def load_config_from_string(
+        self, config_name: str, config_type_name: str, config_subtype_name: str
+    ) -> DictConfig:
+        return self.config_manager.load_config_from_string(
+            config_name, config_type_name, config_subtype_name
+        )
 
 
 from dagster import ConfigurableResource
@@ -64,6 +71,7 @@ class OpRegistry(ConfigurableResource):
         Raises:
             RuntimeError: If operation already registered
         """
+
         def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
             op_key = (op_type, name)
 
@@ -113,4 +121,22 @@ class ParserResource(ConfigurableResource):
     def get_parser(self):
         """Get a parser instance with the configured threshold."""
         from core.data.translation_parser import Parser
+
         return Parser(fuzzy_threshold=self.fuzzy_threshold)
+
+
+class ExcelWriterResource(ConfigurableResource):
+
+    writing_path: str
+
+    @contextmanager
+    def get_writer(self, file_name: str):
+
+        writer_path = Path(self.writing_path) / Path(file_name)
+
+        writer = pd.ExcelWriter(writer_path)
+
+        try:
+            yield writer
+        finally:
+            writer.close()

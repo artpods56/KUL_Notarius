@@ -14,6 +14,7 @@ class Kinds:
     PANDAS = "pandas"
     YAML = "yaml"
     JSON = "json"
+    EXCEL = "excel"
 
 
 class DataSource:
