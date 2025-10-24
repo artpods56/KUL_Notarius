@@ -4,7 +4,7 @@ from PIL.Image import Image
 from pydantic import BaseModel, Field
 
 from schemas.data.metrics import PageDataMetrics
-from schemas.data.schematism import SchematismPage
+from schemas.data.schematism import SchematismPage, SchematismEntry
 
 PageDataSourceField = Literal[
     "ground_truth",
@@ -41,11 +41,21 @@ class HasPredictionsMixin(BaseModel):
     predictions: SchematismPage = Field(description="Prediction page")
 
 
+class HasAlignedPagesMixin(BaseModel):
+    aligned_schematism_pages: tuple[SchematismPage, SchematismPage] = Field(
+        description="Tuple of aligned predictions and ground truth"
+    )
+
+
 class GroundTruthDataItem(BaseDataItem, HasGroundTruthMixin):
     pass
 
 
 class PredictionDataItem(BaseDataItem, HasPredictionsMixin):
+    pass
+
+
+class GtAlignedPredictionDataItem(BaseDataItem, HasAlignedPagesMixin):
     pass
 
 
