@@ -1,4 +1,4 @@
-from orchestration.assets.export import PandasDataFrameExport
+from orchestration.assets.export import PandasDataFrameExport, WandBDataFrameExport
 from orchestration.constants import AssetLayer, DataSource
 from orchestration.utils import AssetKeyHelper
 
@@ -11,4 +11,19 @@ EVAL_EXPORT_DATAFRAME_PANDAS = {
     AssetKeyHelper.build_prefixed_key(
         AssetLayer.MRT, DataSource.HUGGINGFACE, "eval", "export_dataframe", "pandas"
     ): {"config": PandasDataFrameExport(file_name="schematism_comp.xlsx").model_dump()}
+}
+
+"""
+Asset: [[export.py#eval__wandb_export_dataframe__pandas]]
+Defined in: src/orchestration/assets/export.py
+Resolves to: mrt__huggingface__eval__wandb_export_dataframe__pandas
+"""
+EVAL_WANDB_EXPORT_DATAFRAME_PANDAS = {
+    AssetKeyHelper.build_prefixed_key(
+        AssetLayer.MRT, DataSource.HUGGINGFACE, "eval", "wandb_export_dataframe", "pandas"
+    ): {
+        "config": WandBDataFrameExport(
+            table_name="eval_aligned_dataframe", group_by_key="schematism_name"
+        ).model_dump()
+    }
 }

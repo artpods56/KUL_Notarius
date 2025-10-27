@@ -15,6 +15,7 @@ class Kinds:
     YAML = "yaml"
     JSON = "json"
     EXCEL = "excel"
+    WANDB = "wandb"
 
 
 class DataSource:

@@ -1,3 +1,5 @@
+from datetime import datetime
+
 import dagster as dg
 from dagster import ConfigMapping, mem_io_manager, in_process_executor
 
@@ -31,7 +33,10 @@ from orchestration.configs.transformation_config import (
     EVAL_ALIGNED_DATAFRAME_PANDAS_OP_CONFIG,
 )
 
-from orchestration.configs.exporting_config import EVAL_EXPORT_DATAFRAME_PANDAS
+from orchestration.configs.exporting_config import (
+    EVAL_EXPORT_DATAFRAME_PANDAS,
+    EVAL_WANDB_EXPORT_DATAFRAME_PANDAS,
+)
 from orchestration.configs.models_config import RES_OCR_MODEL_OP_CONFIG
 
 from orchestration.assets.configs import (
@@ -66,7 +71,10 @@ from orchestration.assets.postprocess import (
     gt_aligned__dataset,
 )
 
-from orchestration.assets.export import eval__export_dataframe__pandas
+from orchestration.assets.export import (
+    eval__export_dataframe__pandas,
+    eval__wandb_export_dataframe__pandas,
+)
 
 from orchestration.assets.configs import ocr_model__config
 
@@ -75,7 +83,7 @@ from orchestration.assets.models import ocr_model, lmv3_model, llm_model, parser
 import core.data.filters  # type: ignore
 import schemas.configs  # type: ignore
 
-from orchestration.resources import OpRegistry, ExcelWriterResource
+from orchestration.resources import OpRegistry, ExcelWriterResource, WandBRunResource
 from orchestration.resources import PdfFilesResource, ConfigManagerResource
 
 
@@ -159,12 +167,12 @@ postprocessing_job = dg.define_asset_job(
 )
 
 
-exporting_assets = [eval__export_dataframe__pandas]
+exporting_assets = [eval__export_dataframe__pandas, eval__wandb_export_dataframe__pandas]
 
 exporting_job = dg.define_asset_job(
     name="exporting_pipeline",
     selection=dg.AssetSelection.assets(*exporting_assets),
-    config={"ops": {**EVAL_EXPORT_DATAFRAME_PANDAS}},
+    config={"ops": {**EVAL_EXPORT_DATAFRAME_PANDAS, **EVAL_WANDB_EXPORT_DATAFRAME_PANDAS}},
 )
 
 
@@ -191,6 +199,11 @@ defs = dg.Definitions(
         "op_registry": OpRegistry,
         "mem_io_manager": mem_io_manager,
         "excel_writer": ExcelWriterResource(writing_path=str(OUTPUTS_DIR)),
+        "wandb_run": WandBRunResource(
+            project_name="KUL_IDUB_EcclesiaSchematisms",
+            run_name=f"dagster_eval_{datetime.now().isoformat()}",
+            mode="online",
+        ),
     },
     executor=in_process_executor,
 )

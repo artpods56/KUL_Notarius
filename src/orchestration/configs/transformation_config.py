@@ -18,7 +18,14 @@ FILTERED_HF_DATASET_OP_CONFIG = {
             op_type="filter",
             op_name="filter_schematisms",
             input_columns=["schematism_name"],
-            kwargs={"to_filter": ["wloclawek_1872"]},
+            kwargs={
+                "to_filter": [
+                    "wloclawek_1872",
+                    "wloclawek_1873",
+                    "tarnow_1870",
+                    "chelmno_1871",
+                ]
+            },
         ).model_dump()
     }
 }

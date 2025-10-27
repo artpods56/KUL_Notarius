@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 from contextlib import contextmanager
-from os import write
 from pathlib import Path
 
 import pandas as pd
+import wandb
 from dagster import ConfigurableResource
 from omegaconf import DictConfig
+from wandb.apis.importers.wandb import WandbRun
 
 from core.config.manager import ConfigManager
 from core.utils.shared import PDF_SOURCE_DIR
@@ -140,3 +141,18 @@ class ExcelWriterResource(ConfigurableResource):
             yield writer
         finally:
             writer.close()
+
+
+class WandBRunResource(ConfigurableResource):
+    run_name: str
+    project_name: str
+    mode: str = "online"
+
+    _wandb_run: ClassVar[wandb.Run | None] = None
+
+    def get_wandb_run(self) -> wandb.Run:
+        if WandBRunResource._wandb_run is None:
+            WandBRunResource._wandb_run = wandb.init(
+                project=self.project_name, name=self.run_name, mode=self.mode
+            )
+        return WandBRunResource._wandb_run
