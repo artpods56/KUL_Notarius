@@ -33,7 +33,7 @@ class OcrConfig(dg.Config):
         "ocr_model": AssetIn(key=[AssetLayer.RES, "ocr_model"]),
     },
 )
-def ocr_enriched__dataset(
+def pred__ocr_enriched_dataset__pydantic(
     context: AssetExecutionContext,
     dataset: BaseDataset[BaseDataItem],
     ocr_model: OcrModel,
@@ -92,7 +92,7 @@ class LMv3Config(dg.Config):
         "lmv3_model": AssetIn(key=[AssetLayer.RES, "lmv3_model"]),
     },
 )
-def lmv3_enriched__dataset(
+def pred__lmv3_enriched_dataset__pydantic(
     context: AssetExecutionContext,
     dataset: BaseDataset[BaseDataItem],
     lmv3_model: LMv3Model,
@@ -155,12 +155,12 @@ class LLMConfig(dg.Config):
     group_name=ResourceGroup.DATA,
     kinds={Kinds.PYTHON, Kinds.PYDANTIC},
     ins={
-        "lmv3_dataset": AssetIn(key="lmv3_enriched__dataset"),
-        "ocr_dataset": AssetIn(key="ocr_enriched__dataset"),
+        "lmv3_dataset": AssetIn(key="pred__lmv3_enriched_dataset__pydantic"),
+        "ocr_dataset": AssetIn(key="pred__ocr_enriched_dataset__pydantic"),
         "llm_model": AssetIn(key=[AssetLayer.RES, "llm_model"]),
     },
 )
-def llm_enriched__dataset(
+def pred__llm_enriched_dataset__pydantic(
     context: AssetExecutionContext,
     lmv3_dataset: BaseDataset[PredictionDataItem],
     ocr_dataset: BaseDataset[BaseDataItem],

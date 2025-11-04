@@ -8,7 +8,7 @@ from orchestration.constants import AssetLayer, Kinds, ResourceGroup
 from orchestration.resources import ConfigManagerResource
 
 
-def create_config_asset(asset_name: str, key_prefix: Sequence[str] = None):
+def asset_factory__config(asset_name: str, key_prefix: Sequence[str] = None):
     """Factory function to create config loading assets."""
 
     @dg.asset(
@@ -17,7 +17,7 @@ def create_config_asset(asset_name: str, key_prefix: Sequence[str] = None):
         group_name=ResourceGroup.CONFIG,
         kinds={Kinds.PYTHON, Kinds.YAML},
     )
-    def _config_asset(
+    def _asset__config(
         context: AssetExecutionContext,
         config: ConfigReference,
         config_manager: ConfigManagerResource,
@@ -44,13 +44,13 @@ def create_config_asset(asset_name: str, key_prefix: Sequence[str] = None):
 
         return loaded_config
 
-    return _config_asset
+    return _asset__config
 
 
 # --- dataset configs ---
-hf_dataset__config = create_config_asset("hf_dataset__config")
+hf_dataset__config = asset_factory__config("hf_dataset__config")
 
 # --- model configs ---
-ocr_model__config = create_config_asset("ocr_model__config")
-lmv3_model__config = create_config_asset("lmv3_model__config")
-llm_model__config = create_config_asset("llm_model__config")
+ocr_model__config = asset_factory__config("ocr_model__config")
+lmv3_model__config = asset_factory__config("lmv3_model__config")
+llm_model__config = asset_factory__config("llm_model__config")

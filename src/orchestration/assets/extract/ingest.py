@@ -74,11 +74,6 @@ def raw__pdf__dataset(
     return items
 
 
-"""
-
-"""
-
-
 @dg.asset(
     key_prefix=[AssetLayer.STG, DataSource.HUGGINGFACE],
     group_name=ResourceGroup.DATA,

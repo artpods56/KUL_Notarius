@@ -1,4 +1,4 @@
-from orchestration.assets.postprocess import (
+from orchestration.assets.transform.postprocess import (
     DeaneryFillingConfig,
     ParsingConfig,
     JSONAlignmentConfig,
@@ -8,34 +8,57 @@ from orchestration.constants import DataSource, AssetLayer
 from orchestration.utils import AssetKeyHelper
 
 """
-Asset: [[postprocess.py#deanery_filled__dataset]]
+Asset: [[postprocess.py#pred__deanery_filled_dataset__pydantic]]
 Defined in: src/orchestration/assets/postprocess.py
-Resolves to: fct__huggingface__deanery_filled__dataset
+Resolves to: fct__huggingface__pred__deanery_filled_dataset__pydantic
 """
-DEANERY_FILLED_DATASET_OP_CONFIG = {
+PRED__DEANERY_FILLED_DATASET__PYDANTIC__OP_CONFIG = {
     AssetKeyHelper.build_prefixed_key(
-        AssetLayer.FCT, DataSource.HUGGINGFACE, "deanery_filled", "dataset"
+        AssetLayer.FCT,
+        DataSource.HUGGINGFACE,
+        "pred",
+        "deanery_filled_dataset",
+        "pydantic",
     ): {"config": DeaneryFillingConfig().model_dump()}
 }
 
 """
-Asset: [[postprocess.py#parsed__dataset]]
+Asset: [[postprocess.py#pred__parsed_dataset__pydantic]]
 Defined in: src/orchestration/assets/postprocess.py
-Resolves to: fct__huggingface__parsed__dataset
+Resolves to: fct__huggingface__pred__parsed_dataset__pydantic
 """
-PARSED_DATASET_OP_CONFIG = {
+PRED__PARSED_DATASET__PYDANTIC__OP_CONFIG = {
     AssetKeyHelper.build_prefixed_key(
-        AssetLayer.FCT, DataSource.HUGGINGFACE, "parsed", "dataset"
+        AssetLayer.FCT, DataSource.HUGGINGFACE, "pred", "parsed_dataset", "pydantic"
     ): {"config": ParsingConfig().model_dump()}
 }
 
 """
 Asset: [[postprocess.py#gt_aligned__dataset]]
 Defined in: src/orchestration/assets/postprocess.py
-Resolves to: fct__huggingface__gt_aligned__dataset
+Resolves to: fct__huggingface__gt__aligned_source_dataset__pydantic
 """
-GT_ALIGNED_DATASET_OP_CONFIG = {
+GT__ALIGNED_SOURCE_DATASET__PYDANTIC__OP_CONFIG = {
     AssetKeyHelper.build_prefixed_key(
-        AssetLayer.FCT, DataSource.HUGGINGFACE, "gt_aligned", "dataset"
-    ): {"config": JSONAlignmentConfig(ground_truth_source="parsed").model_dump()}
+        AssetLayer.FCT,
+        DataSource.HUGGINGFACE,
+        "gt",
+        "aligned_source_dataset",
+        "pydantic",
+    ): {"config": JSONAlignmentConfig().model_dump()}
+}
+
+"""
+Asset: [[postprocess.py#gt__aligned_parsed_dataset__pydantic]]
+Defined in: src/orchestration/assets/postprocess.py
+Resolves to: fct__huggingface__gt__aligned_parsed_dataset__pydantic
+"""
+GT__ALIGNED_PARSED_DATASET__PYDANTIC__OP_CONFIG = {
+    AssetKeyHelper.build_prefixed_key(
+        AssetLayer.FCT,
+        DataSource.HUGGINGFACE,
+        "gt",
+        "aligned_parsed_dataset",
+        "pydantic",
+    ): {"config": JSONAlignmentConfig().model_dump()}
 }
