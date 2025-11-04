@@ -25,7 +25,7 @@ def asset_factory__model[ModelT: ConfigurableModel](
         group_name=ResourceGroup.MODEL,
         kinds={Kinds.PYTHON},
         ins=ins,  # {"model_config": AssetIn(key=[AssetLayer.RES, model_config])},
-        io_manager_key="mem_io_manager",
+        # io_manager_key="mem_io_manager",
     )
     def _asset__model(context: AssetExecutionContext, model_config: DictConfig):
 

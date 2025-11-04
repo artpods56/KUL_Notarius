@@ -19,6 +19,7 @@ from orchestration.constants import DataSource, AssetLayer, ResourceGroup, Kinds
 
 import structlog
 
+from orchestration.resources import ImageStorageResource
 from schemas.data.dataset import BaseHuggingFaceDatasetSchema, ETLSpecificDatasetFields
 from schemas.data.pipeline import (
     GroundTruthDataItem,
@@ -137,6 +138,7 @@ def asset_factory__pydantic_dataset[ModelT: BaseDataItem](
         context: AssetExecutionContext,
         dataset: Dataset,
         config: DatasetMappingConfig,
+        image_storage: ImageStorageResource
     ):
         """Convert HuggingFace dataset to Pydantic BaseDataset with BaseDataItem.
 
@@ -157,8 +159,10 @@ def asset_factory__pydantic_dataset[ModelT: BaseDataItem](
 
         for sample in dataset:
 
+            pil_image = sample.get(config.image)
+
             item_structure = {
-                "image": sample.get(config.image),
+                "image_path": image_storage.save_image(pil_image),
                 "metadata": BaseMetaData(
                     sample_id=sample.get(config.sample_id),
                     schematism_name=sample.get(config.schematism_name),
@@ -186,12 +190,7 @@ def asset_factory__pydantic_dataset[ModelT: BaseDataItem](
         context.add_output_metadata(
             {
                 "num_items": MetadataValue.int(len(items)),
-                "random_sample": MetadataValue.json(
-                    {
-                        k: v
-                        for k, v in random_sample.model_dump().items()
-                        if k != "image"
-                    }
+                "random_sample": MetadataValue.json(random_sample.model_dump()
                 ),
             }
         )

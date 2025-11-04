@@ -40,7 +40,7 @@ class ProcessingStep[InT, OutT](ABC):
     def __init__(self):
         """Initialize the processing step with automatic type inference."""
         super().__init__()
-        self.input_type, self.output_type = None, None #self._infer_io_types() TODO: implement this
+        self.input_type, self.output_type = None, None #cls._infer_io_types() TODO: implement this
 
     def __init_subclass__(cls) -> None:
         """Initialize subclass with dedicated structured logger."""

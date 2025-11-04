@@ -6,6 +6,9 @@ class ETLSpecificDatasetFields(BaseModel):
     sample_id: str = Field(
         default="sample_id", description="Sample id of the lmv3_dataset."
     )
+    ground_truth_source: str = Field(
+        default="parsed", description="Ground truth source of the dataset."
+    )
 
 
 class BaseHuggingFaceDatasetSchema(BaseModel):

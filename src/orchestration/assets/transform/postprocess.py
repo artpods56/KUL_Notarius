@@ -13,6 +13,7 @@ from dagster import AssetExecutionContext, MetadataValue, AssetIn, AssetOut
 from core.data.translation_parser import Parser
 from core.data.utils import JSONAligner, align_json_data
 from orchestration.constants import AssetLayer, ResourceGroup, DataSource, Kinds
+from orchestration.resources import ImageStorageResource
 from schemas.data.pipeline import (
     BaseDataset,
     PredictionDataItem,
@@ -109,8 +110,6 @@ def pred__deanery_filled_dataset__pydantic(
 
 class JSONAlignmentConfig(dg.Config):
     """Configuration for JSON alignment operation."""
-
-    gt_source_column_name: str = "parsed"
     threshold: float = 0.5
     weights: dict[str, float] = {
         "deanery": 1.0,
@@ -156,12 +155,6 @@ def asset_factory__gt_aligned_dataset__pydantic(
         Returns:
             Dataset with aligned ground truth and prediction entries
         """
-        if gt_dataset is None:
-            raise RuntimeError(
-                f"No ground truth dataset found for {config.ground_truth_source}"
-            )
-
-        # Create lookup dictionaries by sample_id
         gt_by_id = {
             item.metadata.sample_id: item for item in gt_dataset.items if item.metadata
         }
@@ -216,7 +209,7 @@ def asset_factory__gt_aligned_dataset__pydantic(
 
             # Create the aligned item
             aligned_item = GtAlignedPredictionDataItem(
-                image=gt_item.image,  # Use ground truth image as primary
+                image_path=gt_item.image_path,  # Use ground truth image_path as primary
                 text=parsed_item.text,  # Use parsed text (likely has OCR)
                 metadata=gt_item.metadata,  # Use ground truth metadata
                 aligned_schematism_pages=(
@@ -238,10 +231,6 @@ def asset_factory__gt_aligned_dataset__pydantic(
             context.log.warning("No items were successfully aligned")
 
         random_sample = aligned_items[random.randint(0, len(aligned_items) - 1)]
-
-        context.add_asset_metadata(
-            {"ground_truth_source": MetadataValue.text(config.ground_truth_source)},
-        )
 
         context.add_output_metadata(
             {

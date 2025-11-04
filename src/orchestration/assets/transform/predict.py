@@ -8,6 +8,7 @@ from core.models.llm.model import LLMModel
 from core.models.lmv3.model import LMv3Model
 from core.models.ocr.model import OcrModel
 from orchestration.constants import AssetLayer, ResourceGroup, DataSource, Kinds
+from orchestration.resources import ImageStorageResource
 from schemas.data.pipeline import (
     BaseDataset,
     GroundTruthDataItem,
@@ -38,20 +39,23 @@ def pred__ocr_enriched_dataset__pydantic(
     dataset: BaseDataset[BaseDataItem],
     ocr_model: OcrModel,
     config: OcrConfig,
+    image_storage: ImageStorageResource,
 ) -> BaseDataset[BaseDataItem]:
 
     ocr_executions = 0
 
     for item in dataset.items:
 
-        if not item.image:
+        if not item.image_path:
             continue
 
+        image = image_storage.load_image(item.image_path)
+
         if not item.text:
-            item.text = ocr_model.predict(image=item.image, text_only=config.text_only)
+            item.text = ocr_model.predict(image=image, text_only=config.text_only)
             ocr_executions += 1
         elif config.overwrite:
-            item.text = ocr_model.predict(image=item.image, text_only=config.text_only)
+            item.text = ocr_model.predict(image=image, text_only=config.text_only)
             ocr_executions += 1
 
     random_sample = dataset.items[random.randint(0, len(dataset.items) - 1)]
@@ -97,6 +101,7 @@ def pred__lmv3_enriched_dataset__pydantic(
     dataset: BaseDataset[BaseDataItem],
     lmv3_model: LMv3Model,
     config: LMv3Config,
+    image_storage: ImageStorageResource,
 ) -> BaseDataset[PredictionDataItem]:
 
     lmv3_executions = 0
@@ -105,17 +110,19 @@ def pred__lmv3_enriched_dataset__pydantic(
 
     for base_item in dataset.items:
 
-        if base_item.image is None:
+        if base_item.image_path is None:
             continue
 
+        image = image_storage.load_image(base_item.image_path)
+
         predictions = lmv3_model.predict(
-            base_item.image,
+            image,
             raw_predictions=config.raw_predictions,
         )
         lmv3_executions += 1
 
         prediction_item = PredictionDataItem(
-            image=base_item.image,
+            image_path=base_item.image_path,
             text=base_item.text,
             metadata=base_item.metadata,
             predictions=predictions,
@@ -166,6 +173,7 @@ def pred__llm_enriched_dataset__pydantic(
     ocr_dataset: BaseDataset[BaseDataItem],
     llm_model: LLMModel,
     config: LLMConfig,
+    image_storage: ImageStorageResource,
 ) -> BaseDataset[PredictionDataItem]:
     """Generate LLM predictions for each item in the lmv3_dataset.
 
@@ -178,9 +186,11 @@ def pred__llm_enriched_dataset__pydantic(
 
     for lmv3_item, ocr_item in zip(lmv3_dataset.items, ocr_dataset.items):
 
-        if lmv3_item.image is None and lmv3_item.text is None:
-            context.log.warning(f"Skipping item without image or text")
+        if lmv3_item.image_path is None and lmv3_item.text is None:
+            context.log.warning(f"Skipping item without image_path or text")
             continue
+
+        image = image_storage.load_image(lmv3_item.image_path) if lmv3_item.image_path else None
 
         llm_context = {}
         if config.use_lmv3_hints and lmv3_item.predictions:
@@ -188,7 +198,7 @@ def pred__llm_enriched_dataset__pydantic(
 
         try:
             response, parsed_messages = llm_model.predict(
-                image=lmv3_item.image,
+                image=image,
                 text=ocr_item.text,
                 context=llm_context,
                 system_prompt=config.system_prompt,
@@ -198,7 +208,7 @@ def pred__llm_enriched_dataset__pydantic(
 
             # Update predictions with LLM response
             produced_item = PredictionDataItem(
-                image=lmv3_item.image,
+                image_path=lmv3_item.image_path,
                 text=ocr_item.text,
                 metadata=lmv3_item.metadata,
                 predictions=response,

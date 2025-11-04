@@ -5,10 +5,12 @@ from pathlib import Path
 
 import pandas as pd
 import wandb
+from PIL import Image
 from dagster import ConfigurableResource
 from omegaconf import DictConfig
 from wandb.apis.importers.wandb import WandbRun
 
+from core.caches.utils import get_image_hash
 from core.config.manager import ConfigManager
 from core.utils.shared import PDF_SOURCE_DIR
 
@@ -156,3 +158,28 @@ class WandBRunResource(ConfigurableResource):
                 project=self.project_name, name=self.run_name, mode=self.mode
             )
         return WandBRunResource._wandb_run
+
+
+class ImageStorageResource(ConfigurableResource):
+    image_storage_path: str
+
+    def save_image(self, image: Image.Image) -> str:
+
+        image_hash = get_image_hash(image)
+        file_name = Path(image_hash).with_suffix(".png")
+
+        storage_dir = Path(self.image_storage_path)
+        storage_dir.mkdir(parents=True, exist_ok=True)
+
+        file_path = Path(self.image_storage_path) / file_name
+
+        if file_path.exists():
+            return str(file_path)
+        else:
+            image.save(file_path)
+            return str(file_path)
+
+    def load_image(self, file_path: str) -> Image.Image:
+        if not Path(file_path).exists():
+            raise FileNotFoundError(f"File '{file_path}' does not exist")
+        return Image.open(file_path)

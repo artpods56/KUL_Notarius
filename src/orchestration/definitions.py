@@ -3,7 +3,7 @@ from datetime import datetime
 import dagster as dg
 from dagster import mem_io_manager, in_process_executor
 
-from core.utils.shared import OUTPUTS_DIR
+from core.utils.shared import OUTPUTS_DIR, TMP_DIR
 
 import core.data.filters  # type: ignore
 import schemas.configs  # type: ignore
@@ -23,7 +23,12 @@ from orchestration.jobs.prediction import (
 )
 from orchestration.jobs.complete_pipeline import complete_pipeline_job
 
-from orchestration.resources import OpRegistry, ExcelWriterResource, WandBRunResource
+from orchestration.resources import (
+    OpRegistry,
+    ExcelWriterResource,
+    WandBRunResource,
+    ImageStorageResource,
+)
 from orchestration.resources import ConfigManagerResource
 
 defs = dg.Definitions(
@@ -52,8 +57,9 @@ defs = dg.Definitions(
     resources={
         # "pdf_files": PdfFilesResource(),
         "config_manager": ConfigManagerResource(),
+        "image_storage": ImageStorageResource(image_storage_path=str(TMP_DIR / "dagster_image_storage")),
         "op_registry": OpRegistry,
-        "mem_io_manager": mem_io_manager,
+        "io_manager": mem_io_manager,
         "excel_writer": ExcelWriterResource(writing_path=str(OUTPUTS_DIR)),
         "wandb_run": WandBRunResource(
             project_name="KUL_IDUB_EcclesiaSchematisms",

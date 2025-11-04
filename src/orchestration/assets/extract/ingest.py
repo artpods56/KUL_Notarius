@@ -15,7 +15,11 @@ from orchestration.configs.shared import ConfigReference
 from schemas.data.pipeline import BaseDataItem
 import dagster as dg
 
-from orchestration.resources import PdfFilesResource, ConfigManagerResource
+from orchestration.resources import (
+    PdfFilesResource,
+    ConfigManagerResource,
+    ImageStorageResource,
+)
 from orchestration.constants import DataSource, AssetLayer, ResourceGroup, Kinds
 
 from structlog import get_logger

@@ -10,7 +10,7 @@ from dagster import AssetExecutionContext, AssetIn
 from rapidfuzz import fuzz
 
 from orchestration.constants import AssetLayer, DataSource, ResourceGroup, Kinds
-from orchestration.resources import ExcelWriterResource, WandBRunResource
+from orchestration.resources import ExcelWriterResource, WandBRunResource, ImageStorageResource
 from schemas.data.pipeline import BaseDataset, BaseDataItem
 
 
@@ -155,6 +155,7 @@ def eval__wandb_export_dataframe__pandas(
     pydantic_dataset: BaseDataset[BaseDataItem],
     config: WandBDataFrameExport,
     wandb_run: WandBRunResource,
+    image_storage: ImageStorageResource,
 ):
     """Export dataframe to Weights & Biases as a table."""
 
@@ -163,7 +164,8 @@ def eval__wandb_export_dataframe__pandas(
     ) -> dict[str, Image.Image]:
         mapping = {}
         for item in dataset.items:
-            mapping[item.metadata.sample_id] = item.image
+            if item.image_path:
+                mapping[item.metadata.sample_id] = image_storage.load_image(item.image_path)
 
         return mapping
 

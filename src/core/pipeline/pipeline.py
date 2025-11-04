@@ -6,7 +6,7 @@ learning models and processing steps.
 
 Architecture:
     The pipeline system is built around three key concepts:
-    
+
     1. Pipeline: Main orchestrator that manages model configurations and coordinates
        the execution of processing phases in a dependency-aware manner.
 
@@ -29,7 +29,7 @@ Key Features:
 
 Example:
     Basic pipeline setup and execution:
-    
+
     ```python
     from core.models.ocr.model import OCRModel
     from core.models.llm.model import LLMModel
@@ -44,20 +44,20 @@ Example:
         OCRModel: ocr_config,
         LLMModel: llm_config,
     }
-    
+
     # Create pipeline
     pipeline = Pipeline(model_configs)
-    
+
     # Add phases
     ingestion = IngestionPhase(steps=[load_images_step], name="load_data")
     processing = SampleProcessingPhase(
-        steps=[ocr_step, extraction_step], 
+        steps=[ocr_step, extraction_step],
         name="extract_text",
         depends_on=ingestion
     )
-    
+
     pipeline.add_phases([ingestion, processing])
-    
+
     # Execute
     results = pipeline.run()
     ```
@@ -195,7 +195,7 @@ class PipelinePhase[TStep: ProcessingStep[Any, Any]](ABC):
         if not self.name:
             raise ValueError("You must specify a name for the pipeline phase.")
 
-        # self._validate_steps()
+        # cls._validate_steps()
 
         self.input_type, self.output_type = self._get_io_types()
 

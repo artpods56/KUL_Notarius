@@ -1,6 +1,6 @@
-from typing import Any, Dict, Literal
+from typing import Any, Dict, Literal, Generic, TypeVar
 
-from PIL.Image import Image
+from PIL import Image
 from pydantic import BaseModel, Field
 
 from schemas.data.metrics import PageDataMetrics
@@ -22,7 +22,7 @@ class BaseMetaData(BaseModel):
 
 
 class BaseDataItem(BaseModel):
-    image: Image | None = Field(default=None, description="Image used for prediction.")
+    image_path: str | None = Field(description="Path to the saved image.")
     text: str | None = Field(default=None, description="OCR text extracted from image.")
 
     metadata: BaseMetaData | None = Field(
@@ -31,6 +31,7 @@ class BaseDataItem(BaseModel):
 
     class Config:
         arbitrary_types_allowed = True
+
 
 
 class HasGroundTruthMixin(BaseModel):
@@ -63,7 +64,11 @@ class EvaluationDataItem(BaseDataItem, HasGroundTruthMixin):
     pass
 
 
-class BaseDataset[ItemT: BaseDataItem](BaseModel):
+# TypeVar for generic BaseDataset - using older syntax for pickle compatibility
+ItemT = TypeVar('ItemT', bound=BaseDataItem)
+
+
+class BaseDataset(BaseModel, Generic[ItemT]):
     items: list[ItemT] = Field(description="List of items")
 
 
@@ -73,7 +78,7 @@ class PipelineData(BaseModel):
     """
 
     # Required fields - available at ingestion time
-    image: Image | None = Field(default=None, description="Image used for prediction.")
+    image: Image.Image | None = Field(default=None, description="Image used for prediction.")
     ground_truth: SchematismPage | None = Field(
         default=None, description="Ground truth data."
     )
