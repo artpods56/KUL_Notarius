@@ -3,23 +3,22 @@ import json
 from datetime import datetime
 
 import hydra
+import wandb
+from core.utils.config import config_to_dict
 from dotenv import load_dotenv
 from omegaconf import DictConfig
 from transformers import AutoProcessor, LayoutLMv3ForTokenClassification
 from transformers.data.data_collator import default_data_collator
 from transformers.training_args import TrainingArguments
 
-import wandb
-from ...data.filters import filter_schematisms, merge_filters
-from ...data.maps import convert_to_grayscale, map_labels, merge_maps
 from core.data.metrics import compute_dataset_stats
-from ...data.utils import get_dataset, load_labels, prepare_dataset
 from core.training.metrics import build_compute_metrics
 from core.training.trainers import FocalLossTrainer
-from core.utils.config import config_to_dict
 from core.utils.shared import CONFIGS_DIR
 from core.utils.utils import get_device
-
+from ...data.filters import filter_schematisms, merge_filters
+from ...data.maps import convert_to_grayscale, map_labels, merge_maps
+from ...data.utils import get_dataset, load_labels, prepare_dataset
 
 load_dotenv()
 

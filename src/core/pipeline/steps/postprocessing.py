@@ -12,7 +12,6 @@ from schemas.data.pipeline import PipelineData
 from schemas.data.schematism import SchematismPage
 
 
-
 class DeaneryFillingStep(DatasetProcessingStep[list[PipelineData], list[PipelineData]]):
 
     def __init__(self, sources: list[str]):

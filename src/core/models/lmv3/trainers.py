@@ -2,9 +2,8 @@
 Custom trainer implementations.
 """
 
-from transformers.trainer import Trainer
-
 from lmv3.losses import FocalLoss, FocalLossAlpha, FocalLossGamma, TaskType
+from transformers.trainer import Trainer
 
 
 class FocalLossTrainer(Trainer):

@@ -1,17 +1,16 @@
-import numpy as np
 from typing import List, Literal, Tuple, Union, Optional, cast, overload
 
+import numpy as np
+import pytesseract
 from PIL import Image
 from omegaconf import DictConfig
-import pytesseract
 from structlog import get_logger
 
 from core.caches.ocr_cache import PyTesseractCache
+from core.caches.utils import get_image_hash
+from core.models.base import ConfigurableModel
 from schemas.data.cache import PyTesseractCacheItem
 
-from core.caches.utils import get_image_hash
-
-from core.models.base import ConfigurableModel
 
 def ocr_page(
     pil_image: Image.Image,

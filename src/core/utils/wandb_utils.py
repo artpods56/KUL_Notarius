@@ -1,13 +1,11 @@
 import random
-from typing import Dict, List
-
-import torch
-from datasets import Dataset
-from transformers import AutoProcessor, LayoutLMv3ForTokenClassification
+from typing import List
 
 import wandb
+from dataset.utils import _to_fractional  # Import the centralized function
+from datasets import Dataset
 from lmv3.utils.inference_utils import retrieve_predictions
-from dataset.utils import _to_fractional # Import the centralized function
+from transformers import AutoProcessor, LayoutLMv3ForTokenClassification
 
 
 # Removed local bbox_to_fractional, using imported _to_fractional instead

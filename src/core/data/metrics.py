@@ -1,11 +1,12 @@
+import re
+import unicodedata
 from typing import Callable
+
+from structlog import get_logger
 from thefuzz import fuzz, process
 
 from schemas.data.metrics import Metrics, PageDataMetrics
 from schemas.data.schematism import SchematismPage, SchematismEntry
-from structlog import get_logger
-import unicodedata
-import re
 
 logger = get_logger(__name__)
 

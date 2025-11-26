@@ -1,4 +1,5 @@
 from typing import Sequence
+
 import dagster as dg
 from dagster import AssetExecutionContext, MetadataValue
 from omegaconf import OmegaConf

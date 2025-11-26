@@ -1,6 +1,7 @@
+import sqlite3
+
 import pandas as pd
 import pytest
-import sqlite3
 
 from core.pipeline.steps.export import AppendDataFrameToSQLStep
 

@@ -1,5 +1,5 @@
 from typing import List, Callable
-from PIL import Image
+
 
 def merge_maps(mappers: List[Callable]) -> Callable:
     """

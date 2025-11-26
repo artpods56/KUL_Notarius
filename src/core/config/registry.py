@@ -1,12 +1,13 @@
 """Config registry for automatic model discovery and validation."""
 from typing import Dict, List, Optional, Tuple, Type, Any, TypeVar
-from core.exceptions import ConfigNotRegisteredError
+
 from pydantic import BaseModel, ValidationError
+from structlog import get_logger
 
 from core.config.constants import ConfigType, ConfigSubTypes
 from core.config.helpers import validate_config_arguments
+from core.exceptions import ConfigNotRegisteredError
 
-from structlog import get_logger
 logger = get_logger(__name__)
 
 S = TypeVar("S", bound=BaseModel)  # S: Represents a specific Pydantic config schema subclass

@@ -5,14 +5,14 @@ from PIL import Image
 from dotenv import load_dotenv
 from omegaconf import DictConfig
 
+import schemas.configs  # type: ignore
 from core.config.constants import DatasetConfigSubtype, ModelsConfigSubtype
 from core.config.manager import ConfigManager, ConfigType
 from core.pipeline.pipeline import Pipeline
+from core.utils.shared import CONFIGS_DIR
 from schemas.data.pipeline import PipelineData
 from schemas.data.schematism import SchematismPage
-from core.utils.shared import CONFIGS_DIR
 
-import schemas.configs #type: ignore
 
 @pytest.fixture(scope="session", autouse=True)
 def _load_dotenv_once_for_everybody() -> None:

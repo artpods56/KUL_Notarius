@@ -2,9 +2,8 @@ import random
 from typing import Any, List, Tuple
 
 import torch
-from torch.utils.data import Dataset
-
 from dataset.utils import parse_to_json
+from torch.utils.data import Dataset
 
 added_tokens = []
 

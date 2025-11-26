@@ -1,5 +1,4 @@
 from orchestration.assets.transform.predict import OcrConfig, LMv3Config, LLMConfig
-from orchestration.configs.shared import ConfigReference
 from orchestration.constants import DataSource, AssetLayer
 from orchestration.utils import AssetKeyHelper
 

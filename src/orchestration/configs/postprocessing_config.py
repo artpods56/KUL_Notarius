@@ -3,7 +3,6 @@ from orchestration.assets.transform.postprocess import (
     ParsingConfig,
     JSONAlignmentConfig,
 )
-from orchestration.configs.shared import ConfigReference
 from orchestration.constants import DataSource, AssetLayer
 from orchestration.utils import AssetKeyHelper
 

@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field
 
-from core.config.registry import register_config
 from core.config.constants import ConfigType, ModelsConfigSubtype
+from core.config.registry import register_config
 
 
 @register_config(ConfigType.MODELS, ModelsConfigSubtype.OCR)

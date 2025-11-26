@@ -71,11 +71,12 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections.abc import Mapping
+from dataclasses import dataclass
+from itertools import chain
 from typing import Iterable, Iterator, cast, Type, Any, Dict
 
-from dataclasses import dataclass
-from tqdm import tqdm
 from structlog import get_logger
+from tqdm import tqdm
 
 from core.models.base import ConfigurableModel, ModelConfigMap
 from core.pipeline.steps.base import (
@@ -84,8 +85,6 @@ from core.pipeline.steps.base import (
     DatasetProcessingStep,
     IngestionProcessingStep,
 )
-from itertools import chain
-
 from schemas.data.pipeline import PipelineData
 
 logger = get_logger(__name__)

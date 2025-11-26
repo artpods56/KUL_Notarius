@@ -5,8 +5,8 @@ This module provides concrete implementations of preprocessing steps for the pip
 """
 from datasets import Dataset
 
-from core.pipeline.steps.base import DatasetProcessingStep
 from core.data.filters import filter_schematisms
+from core.pipeline.steps.base import DatasetProcessingStep
 
 
 class SchematismsFilteringStep(DatasetProcessingStep[Dataset, Dataset]):

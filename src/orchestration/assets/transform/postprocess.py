@@ -8,12 +8,11 @@ import random
 from typing import Optional
 
 import dagster as dg
-from dagster import AssetExecutionContext, MetadataValue, AssetIn, AssetOut
+from dagster import AssetExecutionContext, MetadataValue, AssetIn
 
 from core.data.translation_parser import Parser
-from core.data.utils import JSONAligner, align_json_data
+from core.data.utils import JSONAligner
 from orchestration.constants import AssetLayer, ResourceGroup, DataSource, Kinds
-from orchestration.resources import ImageStorageResource
 from schemas.data.pipeline import (
     BaseDataset,
     PredictionDataItem,

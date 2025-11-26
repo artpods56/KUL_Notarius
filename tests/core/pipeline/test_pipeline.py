@@ -1,6 +1,5 @@
 """Integration tests for the Pipeline class."""
-import pytest
-from core.pipeline.pipeline import Pipeline
+
 
 class TestPipeline:
     def test_pipeline_initialization(self):

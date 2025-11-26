@@ -3,7 +3,6 @@ import random
 import dagster as dg
 from dagster import AssetIn, AssetExecutionContext, MetadataValue
 
-from core.data.schematism_parser import SchematismPage
 from core.models.llm.model import LLMModel
 from core.models.lmv3.model import LMv3Model
 from core.models.ocr.model import OcrModel
@@ -11,7 +10,6 @@ from orchestration.constants import AssetLayer, ResourceGroup, DataSource, Kinds
 from orchestration.resources import ImageStorageResource
 from schemas.data.pipeline import (
     BaseDataset,
-    GroundTruthDataItem,
     PredictionDataItem,
     BaseDataItem,
 )

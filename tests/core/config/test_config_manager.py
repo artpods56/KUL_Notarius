@@ -1,6 +1,7 @@
-from core.config.registry import ConfigType
-from core.config.constants import ModelsConfigSubtype
 from pathlib import Path
+
+from core.config.constants import ModelsConfigSubtype
+from core.config.registry import ConfigType
 
 
 class TestConfigManager:

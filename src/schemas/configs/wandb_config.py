@@ -1,8 +1,10 @@
 from typing import List
+
 from pydantic import BaseModel, Field, ConfigDict
 
-from core.config.registry import register_config
 from core.config.constants import ConfigType, WandbConfigSubtype
+from core.config.registry import register_config
+
 
 @register_config(ConfigType.WANDB, WandbConfigSubtype.DEFAULT)
 class WandbConfig(BaseModel):

@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from datetime import datetime
-from typing import Mapping, Optional, Sequence, Tuple, Type
-
 import os
 import platform
+from datetime import datetime
+from typing import Mapping, Optional, Sequence, Type
 
 from rich.box import ROUNDED
 from rich.console import Console

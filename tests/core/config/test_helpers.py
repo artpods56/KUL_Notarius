@@ -1,11 +1,11 @@
 import pytest
 
-from core.config.helpers import validate_config_arguments
 from core.config.constants import (
     ConfigType,
     DatasetConfigSubtype,
     ModelsConfigSubtype,
 )
+from core.config.helpers import validate_config_arguments
 from core.exceptions import InvalidConfigSubtype
 
 

@@ -1,7 +1,7 @@
 """Utilities for handling and saving generated mappings."""
 
-import json
 import datetime
+import json
 from typing import Dict, Any, Optional
 
 import structlog

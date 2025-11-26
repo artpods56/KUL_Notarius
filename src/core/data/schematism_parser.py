@@ -8,7 +8,6 @@ from PIL import Image
 from pydantic import BaseModel, Field
 from shapely import wkt
 
-
 logger = logging.getLogger(__name__)
 
 

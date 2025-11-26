@@ -1,5 +1,3 @@
-import pymupdf
-
 from dataclasses import dataclass
 from pathlib import Path
 from typing import (
@@ -10,6 +8,7 @@ from typing import (
     Any,
 )
 
+import pymupdf
 from PIL import Image
 from omegaconf import DictConfig
 
@@ -17,7 +16,6 @@ from core.data.utils import get_dataset
 from core.pipeline.steps.base import IngestionProcessingStep
 from schemas.data.pipeline import PipelineData
 from schemas.data.schematism import SchematismPage
-
 
 ImageFileExtension = Literal[".jpg", ".jpeg", ".png"]
 TextFileExtension = Literal[".txt"]

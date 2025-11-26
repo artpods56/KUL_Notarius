@@ -1,12 +1,12 @@
+import logging
 import logging.config
-import os
+import sys
 from pathlib import Path
-from typing import Optional, Literal, get_args
-import logging, sys, structlog
-import yaml
+from typing import Literal
+
 import structlog
 
-from core.utils.shared import CONFIGS_DIR, REPOSITORY_ROOT
+from core.utils.shared import REPOSITORY_ROOT
 
 LOG_LEVELS = Literal["INFO", "DEBUG", "INFO", "WARNING", "ERROR"]
 

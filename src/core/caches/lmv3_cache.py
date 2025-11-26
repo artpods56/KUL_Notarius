@@ -1,8 +1,10 @@
-from core.caches.base_cache import BaseCache
-from typing import Any, Dict, Optional, Tuple, List
 from pathlib import Path
+from typing import Any, Dict, Optional
 
 from structlog import get_logger
+
+from core.caches.base_cache import BaseCache
+
 
 class LMv3Cache(BaseCache):
     def __init__(self, checkpoint: str, caches_dir: Optional[Path] = None):

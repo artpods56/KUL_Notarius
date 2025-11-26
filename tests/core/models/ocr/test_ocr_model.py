@@ -1,12 +1,10 @@
-import os
-from typing import Dict, List, Tuple
+from typing import List, Tuple
 
-import numpy as np
 import pytest
-import pytesseract
 from PIL import Image
 
 from core.models.ocr.model import OcrModel
+
 
 @pytest.fixture()
 def ocr_model(ocr_model_config):

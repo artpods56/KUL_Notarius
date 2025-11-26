@@ -1,13 +1,9 @@
-import os
 import warnings
 from datetime import datetime
 
 import wandb
 from dotenv import load_dotenv
 from omegaconf import DictConfig
-from sqlalchemy import create_engine
-
-import schemas.configs
 
 from core.config.constants import ConfigType, DatasetConfigSubtype, ModelsConfigSubtype
 from core.config.helpers import with_configs

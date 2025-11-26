@@ -1,5 +1,7 @@
-from PIL import Image
 import hashlib
+
+from PIL import Image
+
 
 def get_image_hash(pil_image: Image.Image) -> str:
     """Generate a hash for the image to use as cache key."""

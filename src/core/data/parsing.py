@@ -5,17 +5,7 @@ This module provides utilities to convert BIO-tagged annotations into structured
 file_format for ecclesiastical schematism documents.
 """
 
-import json
-from typing import List, Dict, Any, Optional, Tuple
-import operator
-from thefuzz import fuzz
-import re, unicodedata
-import os
-from pathlib import Path
-import geopandas as gpd
-import pandas as pd
-from shapely import wkt
-from dotenv import load_dotenv
+from typing import List
 
 
 def bio_to_spans(words: List[str], labels: List[str]) -> List[tuple]:

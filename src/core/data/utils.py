@@ -157,9 +157,8 @@ maintaining order with empty placeholders for unmatched entries.
 Perfect for calculating metrics between two datasets.
 """
 
-import json
 from difflib import SequenceMatcher
-from typing import List, Dict, Optional, Tuple
+from typing import List, Dict, Tuple
 
 
 class JSONAligner:

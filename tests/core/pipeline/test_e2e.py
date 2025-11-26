@@ -1,6 +1,5 @@
 """End-to-end tests for the complete pipeline."""
-import pytest
-from core.pipeline.pipeline import Pipeline
+
 
 class TestPipelineE2E:
     def test_single_document_processing(self):

@@ -1,15 +1,12 @@
 from __future__ import annotations
 
+import inspect
 from functools import wraps
 from pathlib import Path
 from typing import Callable, Dict, List
-import inspect
 
 from core.config.constants import ConfigType, ConfigTypeMapping
-
 from core.exceptions import InvalidConfigType, InvalidConfigSubtype
-
-from core.utils.shared import CONFIGS_DIR
 
 
 def validate_config_arguments(func):

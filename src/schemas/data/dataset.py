@@ -1,4 +1,3 @@
-from PIL import Image
 from pydantic import BaseModel, Field
 
 

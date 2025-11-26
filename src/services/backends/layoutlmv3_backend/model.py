@@ -3,20 +3,16 @@ import os
 from dataclasses import dataclass
 from io import BytesIO
 from pathlib import Path
-from typing import Any, Dict, List, Optional
-from urllib.parse import urlparse
+from typing import Dict, List, Optional
 
 import boto3
 import requests
 import torch
+from PIL import Image
 from label_studio_ml.model import LabelStudioMLBase
 from label_studio_ml.response import (
     ModelResponse,
-    PredictionValue,
-    SingleTaskPredictions,
 )
-from PIL import Image
-from torch._prims_common import DeviceLikeType, check
 from transformers import AutoProcessor, LayoutLMv3ForTokenClassification
 
 from utils import (

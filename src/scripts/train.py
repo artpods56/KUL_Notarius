@@ -1,31 +1,24 @@
 # src/wikichurches/train.py
 import json
-import os
 from datetime import datetime
-from typing import cast
 
 import hydra
-from datasets import Dataset, DownloadMode, load_dataset
-from dotenv import load_dotenv
-from omegaconf import DictConfig, OmegaConf
-from transformers import AutoProcessor, LayoutLMv3ForTokenClassification
-from transformers.data.data_collator import default_data_collator
-from transformers.training_args import TrainingArguments
-
 import wandb
 from dataset.filters import filter_schematisms, merge_filters  # Updated import
 from dataset.maps import convert_to_grayscale, map_labels, merge_maps  # Updated import
 from dataset.stats import compute_dataset_stats  # Updated import
 from dataset.utils import get_dataset, load_labels, prepare_dataset
+from dotenv import load_dotenv
 from lmv3.metrics import build_compute_metrics
 from lmv3.trainers import FocalLossTrainer
 from lmv3.utils.config import config_to_dict
-
-from shared import CONFIGS_DIR
 # Updated imports for load_labels and prepare_dataset, get_device remains
 from lmv3.utils.utils import get_device
-from lmv3.setup import get_model_and_processor
-
+from omegaconf import DictConfig
+from shared import CONFIGS_DIR
+from transformers import AutoProcessor, LayoutLMv3ForTokenClassification
+from transformers.data.data_collator import default_data_collator
+from transformers.training_args import TrainingArguments
 
 load_dotenv()
 

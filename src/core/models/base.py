@@ -1,7 +1,8 @@
 from abc import ABC, abstractmethod
-from typing import Dict, Type, Optional
+from typing import Dict, Type
 
 from omegaconf import DictConfig
+
 
 class ConfigurableModel(ABC):
     @classmethod

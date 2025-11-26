@@ -12,25 +12,23 @@ Usage inside the notebook:
 Or just tweak the paths below and run this cell.
 """
 
-import os
-import json
 import argparse
+import json
 import logging
-import sys
+import os
+import subprocess
+from datetime import datetime
 from pathlib import Path
 from typing import List, Tuple, Optional
 
+import geopandas as gpd
 import numpy as np
 import pandas as pd
-from PIL import Image
 import pytesseract
+from PIL import Image
 from shapely.geometry import box
-import geopandas as gpd
-from transformers import AutoTokenizer
 from tqdm.auto import tqdm
-from huggingface_hub import HfApi, Repository
-import subprocess
-from datetime import datetime
+from transformers import AutoTokenizer
 
 from config import setup_logging, load_config_from_env
 

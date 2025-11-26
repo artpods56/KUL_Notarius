@@ -1,12 +1,13 @@
-import os
 import json
+import os
 from pathlib import Path
 from typing import Optional, Tuple, Dict, Any, cast
 
-from schemas.data.schematism import SchematismPage
+from structlog import get_logger
 from thefuzz import fuzz, process
 
-from structlog import get_logger
+from schemas.data.schematism import SchematismPage
+
 logger = get_logger(__name__)
 
 
