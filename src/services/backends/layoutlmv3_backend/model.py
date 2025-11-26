@@ -19,7 +19,12 @@ from PIL import Image
 from torch._prims_common import DeviceLikeType, check
 from transformers import AutoProcessor, LayoutLMv3ForTokenClassification
 
-from utils import merge_bio_entities, pixel_bbox_to_percent, sliding_window, preprocess_for_ocr
+from utils import (
+    merge_bio_entities,
+    pixel_bbox_to_percent,
+    sliding_window,
+    preprocess_for_ocr,
+)
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -40,7 +45,6 @@ MODEL_DIR = "/app/data/models"
 checkpoint_path = os.path.join(
     MODEL_DIR, os.getenv("MODEL_CHECKPOINT", "checkpoint-400")
 )
-
 
 
 logger.info(f"Loading model from {checkpoint_path}")
@@ -126,12 +130,12 @@ class LayoutLMv3Backend(LabelStudioMLBase):
             checkpoint_path = Path(os.path.join(self.MODEL_DIR, self.model_checkpoint))
             try:
                 logger.info("Loading the model from cache.")
-                # self._model = LayoutLMv3ForTokenClassification.from_pretrained(
+                # cls._model = LayoutLMv3ForTokenClassification.from_pretrained(
                 #     checkpoint_path
                 # )
                 self._model = _GLOBAL_MODEL
                 self._processor = _GLOBAL_PROCESSOR
-                # self._processor = AutoProcessor.from_pretrained(
+                # cls._processor = AutoProcessor.from_pretrained(
                 #     "microsoft/layoutlmv3-large", apply_ocr=True
                 # )
             except (OSError, ValueError, RuntimeError) as e:
@@ -150,7 +154,6 @@ class LayoutLMv3Backend(LabelStudioMLBase):
             buf = BytesIO(obj["Body"].read())
             return Image.open(buf).convert("RGB")
 
-        
         # fallback na HTTP/HTTPS
         resp = requests.get(uri, stream=True, headers=self.request_headers)
         resp.raise_for_status()

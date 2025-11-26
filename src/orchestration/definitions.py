@@ -1,48 +1,71 @@
+from datetime import datetime
+
 import dagster as dg
-from dagster import ConfigMapping
+from dagster import mem_io_manager, in_process_executor
 
-from orchestration.configs.ingestion_config import HUGGINGFACE_DATASET_INGESTION_OP_CONFIG
-from orchestration.configs.transformation_config import HUGGINGFACE_DATASET_TRANSFORMATION_OP_CONFIG, \
-    HUGGINGFACE_DATASET_CONVERSION_CONFIG
+from core.utils.shared import OUTPUTS_DIR, TMP_DIR
 
-from orchestration.assets.ingest import (
-    huggingface_dataset,
-    pdf_to_dataset,
-    DatasetConfig,
+import core.data.filters  # type: ignore
+import schemas.configs  # type: ignore
+
+from orchestration.jobs.exporting import exporting_assets, exporting_job
+from orchestration.jobs.ingestion import (
+    dataset_config_assets,
+    ingestion_assets,
+    ingestion_job,
 )
-
-from core.data import filters
-import schemas.configs # type: ignore
-from orchestration.assets.transform import (
-    filtered_huggingface_dataset,
-    hf_ground_truth_dataset,
+from orchestration.jobs.postprocessing import postprocessing_assets, postprocessing_job
+from orchestration.jobs.prediction import (
+    models_config_assets,
+    models_assets,
+    prediction_assets,
+    prediction_job,
 )
-from orchestration.resources import OpRegistry
-from orchestration.resources import PdfFilesResource, ConfigManagerResource
+from orchestration.jobs.complete_pipeline import complete_pipeline_job
 
-# op_registry = get_op_registry()
-
-evaluation_job = dg.define_asset_job(
-    name="ingestion_pipeline",
-    selection=dg.AssetSelection.assets(
-        huggingface_dataset, filtered_huggingface_dataset, hf_ground_truth_dataset
-    ),
-    config={
-        "ops":{
-            **HUGGINGFACE_DATASET_INGESTION_OP_CONFIG,
-            **HUGGINGFACE_DATASET_TRANSFORMATION_OP_CONFIG,
-            **HUGGINGFACE_DATASET_CONVERSION_CONFIG
-            }
-    }
+from orchestration.resources import (
+    OpRegistry,
+    ExcelWriterResource,
+    WandBRunResource,
+    ImageStorageResource,
 )
+from orchestration.resources import ConfigManagerResource
 
 defs = dg.Definitions(
-    assets=[huggingface_dataset, filtered_huggingface_dataset, hf_ground_truth_dataset],
-    jobs=[evaluation_job],
+    assets=[
+        # ingestion
+        *dataset_config_assets,
+        *ingestion_assets,
+        # configs
+        *models_config_assets,
+        # models
+        *models_assets,
+        # prediction
+        *prediction_assets,
+        # postprocessing
+        *postprocessing_assets,
+        # export
+        *exporting_assets,
+    ],
+    jobs=[
+        ingestion_job,
+        prediction_job,
+        postprocessing_job,
+        exporting_job,
+        complete_pipeline_job,
+    ],
     resources={
         # "pdf_files": PdfFilesResource(),
         "config_manager": ConfigManagerResource(),
-        "op_registry":  OpRegistry
-
+        "image_storage": ImageStorageResource(image_storage_path=str(TMP_DIR / "dagster_image_storage")),
+        "op_registry": OpRegistry,
+        "io_manager": mem_io_manager,
+        "excel_writer": ExcelWriterResource(writing_path=str(OUTPUTS_DIR)),
+        "wandb_run": WandBRunResource(
+            project_name="KUL_IDUB_EcclesiaSchematisms",
+            run_name=f"dagster_eval_{datetime.now().isoformat()}",
+            mode="online",
+        ),
     },
+    executor=in_process_executor,
 )

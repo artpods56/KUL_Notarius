@@ -8,13 +8,14 @@ from dataset.utils import parse_to_json
 
 added_tokens = []
 
+
 class DonutDataset(Dataset):
     """
     PyTorch Dataset for Donut. This class takes a HuggingFace Dataset as input.
-    
+
     Each row, consists of image path(png/jpg/jpeg) and gt data (json/jsonl/txt),
     and it will be converted into pixel_values (vectorized image) and labels (input_ids of the tokenized string).
-    
+
     Args:
         dataset_name_or_path: description of data (available at huggingface.co/datasets) or the path containing image files and metadata.jsonl
         max_length: the max number of tokens for the target sequences
@@ -46,7 +47,9 @@ class DonutDataset(Dataset):
         self.split = split
         self.ignore_id = ignore_id
         self.task_start_token = task_start_token
-        self.prompt_end_token = prompt_end_token if prompt_end_token else task_start_token
+        self.prompt_end_token = (
+            prompt_end_token if prompt_end_token else task_start_token
+        )
         self.sort_json_key = sort_json_key
 
         self.dataset = dataset
@@ -54,7 +57,9 @@ class DonutDataset(Dataset):
 
         self.gt_token_sequences = []
         for sample in self.dataset:
-            ground_truth = parse_to_json(sample["words"], sample["labels"], sample["bboxes"])
+            ground_truth = parse_to_json(
+                sample["words"], sample["labels"], sample["bboxes"]
+            )
 
             self.gt_token_sequences.append(
                 [
@@ -68,9 +73,16 @@ class DonutDataset(Dataset):
             )
 
         self.add_tokens([self.task_start_token, self.prompt_end_token])
-        self.prompt_end_token_id = self.processor.tokenizer.convert_tokens_to_ids(self.prompt_end_token)
+        self.prompt_end_token_id = self.processor.tokenizer.convert_tokens_to_ids(
+            self.prompt_end_token
+        )
 
-    def json2token(self, obj: Any, update_special_tokens_for_json_key: bool = True, sort_json_key: bool = True):
+    def json2token(
+        self,
+        obj: Any,
+        update_special_tokens_for_json_key: bool = True,
+        sort_json_key: bool = True,
+    ):
         """
         Convert an ordered JSON object into a token sequence
         """
@@ -85,23 +97,30 @@ class DonutDataset(Dataset):
                     keys = obj.keys()
                 for k in keys:
                     if update_special_tokens_for_json_key:
-                        self.add_tokens([fr"<s_{k}>", fr"</s_{k}>"])
+                        self.add_tokens([rf"<s_{k}>", rf"</s_{k}>"])
                     output += (
-                        fr"<s_{k}>"
-                        + self.json2token(obj[k], update_special_tokens_for_json_key, sort_json_key)
-                        + fr"</s_{k}>"
+                        rf"<s_{k}>"
+                        + self.json2token(
+                            obj[k], update_special_tokens_for_json_key, sort_json_key
+                        )
+                        + rf"</s_{k}>"
                     )
                 return output
         elif type(obj) == list:
             return r"<sep/>".join(
-                [self.json2token(item, update_special_tokens_for_json_key, sort_json_key) for item in obj]
+                [
+                    self.json2token(
+                        item, update_special_tokens_for_json_key, sort_json_key
+                    )
+                    for item in obj
+                ]
             )
         else:
             obj = str(obj)
             if f"<{obj}/>" in added_tokens:
                 obj = f"<{obj}/>"  # for categorical special tokens
             return obj
-    
+
     def add_tokens(self, list_of_tokens: List[str]):
         """
         Add special tokens to tokenizer and resize the token embeddings of the decoder
@@ -110,7 +129,7 @@ class DonutDataset(Dataset):
         if newly_added_num > 0:
             self.model.decoder.resize_token_embeddings(len(self.processor.tokenizer))
             added_tokens.extend(list_of_tokens)
-    
+
     def __len__(self) -> int:
         return self.dataset_length
 
@@ -126,11 +145,17 @@ class DonutDataset(Dataset):
         sample = self.dataset[idx]
 
         # inputs
-        pixel_values = self.processor(sample["image_pil"], random_padding=self.split == "train", return_tensors="pt").pixel_values
+        pixel_values = self.processor(
+            sample["image_pil"],
+            random_padding=self.split == "train",
+            return_tensors="pt",
+        ).pixel_values
         pixel_values = pixel_values.squeeze()
 
         # targets
-        target_sequence = random.choice(self.gt_token_sequences[idx])  # can be more than one, e.g., DocVQA Task 1
+        target_sequence = random.choice(
+            self.gt_token_sequences[idx]
+        )  # can be more than one, e.g., DocVQA Task 1
         input_ids = self.processor.tokenizer(
             target_sequence,
             add_special_tokens=False,
@@ -142,7 +167,9 @@ class DonutDataset(Dataset):
 
         labels = input_ids.clone()
         labels[labels == self.processor.tokenizer.pad_token_id] = self.ignore_id
-        # labels[: torch.nonzero(labels == self.prompt_end_token_id).sum() + 1] = self.ignore_id  # model doesn't need to predict prompt (for VQA)
-        return {"pixel_values": pixel_values,
-                "labels": labels,
-                "target_sequence": target_sequence}
+        # labels[: torch.nonzero(labels == cls.prompt_end_token_id).sum() + 1] = cls.ignore_id  # model doesn't need to predict prompt (for VQA)
+        return {
+            "pixel_values": pixel_values,
+            "labels": labels,
+            "target_sequence": target_sequence,
+        }

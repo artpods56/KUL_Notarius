@@ -1,10 +1,16 @@
 from __future__ import annotations
 
+from contextlib import contextmanager
 from pathlib import Path
 
+import pandas as pd
+import wandb
+from PIL import Image
 from dagster import ConfigurableResource
 from omegaconf import DictConfig
+from wandb.apis.importers.wandb import WandbRun
 
+from core.caches.utils import get_image_hash
 from core.config.manager import ConfigManager
 from core.utils.shared import PDF_SOURCE_DIR
 
@@ -30,8 +36,12 @@ class ConfigManagerResource(ConfigurableResource):
     ) -> DictConfig:
         return self.config_manager.load_config(config_name, config_type, config_subtype)
 
-    def load_config_from_string(self, config_name: str, config_type_name: str, config_subtype_name: str) -> DictConfig:
-        return self.config_manager.load_config_from_string(config_name, config_type_name, config_subtype_name)
+    def load_config_from_string(
+        self, config_name: str, config_type_name: str, config_subtype_name: str
+    ) -> DictConfig:
+        return self.config_manager.load_config_from_string(
+            config_name, config_type_name, config_subtype_name
+        )
 
 
 from dagster import ConfigurableResource
@@ -64,6 +74,7 @@ class OpRegistry(ConfigurableResource):
         Raises:
             RuntimeError: If operation already registered
         """
+
         def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
             op_key = (op_type, name)
 
@@ -99,3 +110,76 @@ class OpRegistry(ConfigurableResource):
     def clear(cls) -> None:
         """Clear all registered operations. Useful for testing."""
         cls._ops_registry.clear()
+
+
+class ParserResource(ConfigurableResource):
+    """Resource for the translation parser.
+
+    This resource wraps the Parser class to make it available
+    as a Dagster resource that can be injected into assets.
+    """
+
+    fuzzy_threshold: int = 80
+
+    def get_parser(self):
+        """Get a parser instance with the configured threshold."""
+        from core.data.translation_parser import Parser
+
+        return Parser(fuzzy_threshold=self.fuzzy_threshold)
+
+
+class ExcelWriterResource(ConfigurableResource):
+
+    writing_path: str
+
+    @contextmanager
+    def get_writer(self, file_name: str):
+
+        writer_path = Path(self.writing_path) / Path(file_name)
+
+        writer = pd.ExcelWriter(writer_path)
+
+        try:
+            yield writer
+        finally:
+            writer.close()
+
+
+class WandBRunResource(ConfigurableResource):
+    run_name: str
+    project_name: str
+    mode: str = "online"
+
+    _wandb_run: ClassVar[wandb.Run | None] = None
+
+    def get_wandb_run(self) -> wandb.Run:
+        if WandBRunResource._wandb_run is None:
+            WandBRunResource._wandb_run = wandb.init(
+                project=self.project_name, name=self.run_name, mode=self.mode
+            )
+        return WandBRunResource._wandb_run
+
+
+class ImageStorageResource(ConfigurableResource):
+    image_storage_path: str
+
+    def save_image(self, image: Image.Image) -> str:
+
+        image_hash = get_image_hash(image)
+        file_name = Path(image_hash).with_suffix(".png")
+
+        storage_dir = Path(self.image_storage_path)
+        storage_dir.mkdir(parents=True, exist_ok=True)
+
+        file_path = Path(self.image_storage_path) / file_name
+
+        if file_path.exists():
+            return str(file_path)
+        else:
+            image.save(file_path)
+            return str(file_path)
+
+    def load_image(self, file_path: str) -> Image.Image:
+        if not Path(file_path).exists():
+            raise FileNotFoundError(f"File '{file_path}' does not exist")
+        return Image.open(file_path)

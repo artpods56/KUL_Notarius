@@ -1,9 +1,9 @@
 import json
 
-from core.pipeline.steps.transformation import HuggingFaceTransformationStep
+from core.pipeline.steps.wrappers import HuggingFaceToPipelineDataStep
 import pytest
 from omegaconf import DictConfig, OmegaConf
-from schemas import PipelineData
+from schemas.data.pipeline import PipelineData
 from schemas.data.schematism import SchematismPage
 
 class TestHFIngestionAdapter:
@@ -14,7 +14,7 @@ class TestHFIngestionAdapter:
         Tests that the adapter initializes correctly with a valid config fixture.
         """
         try:
-            adapter = HuggingFaceTransformationStep(dataset_config=dataset_config)
+            adapter = HuggingFaceToPipelineDataStep(dataset_config=dataset_config)
             assert adapter is not None
             # Check that the source column names were loaded correctly from the config
             assert adapter.image_src_col == "image"
@@ -34,14 +34,14 @@ class TestHFIngestionAdapter:
             }
         })
         with pytest.raises(ValueError, match="Config's column_map must specify 'image_column' and 'ground_truth_column'."):
-            HuggingFaceTransformationStep(dataset_config=bad_config)
+            HuggingFaceToPipelineDataStep(dataset_config=bad_config)
 
     def test_successful_processing(self, dataset_config: DictConfig, sample_pil_image, sample_structured_response):
         """
         Tests the successful processing of a single, valid data sample.
         The test uses real fixtures to ensure the adapter works with the project's configuration.
         """
-        adapter = HuggingFaceTransformationStep(dataset_config=dataset_config)
+        adapter = HuggingFaceToPipelineDataStep(dataset_config=dataset_config)
         
         # The 'schematism_dataset_config' maps 'ground_truth_column' to 'results'.
         # So, the raw data sample must have an 'image' key and a 'results' key.
@@ -66,7 +66,7 @@ class TestHFIngestionAdapter:
         Tests that processing fails if the data sample is missing a required field
         (in this case, the ground truth).
         """
-        adapter = HuggingFaceTransformationStep(dataset_config=dataset_config)
+        adapter = HuggingFaceToPipelineDataStep(dataset_config=dataset_config)
         
         # This sample is missing the 'results' key, which is mapped to ground_truth.
         bad_sample_data = {
@@ -80,7 +80,7 @@ class TestHFIngestionAdapter:
         """
         Tests the successful batch processing of multiple valid data samples.
         """
-        adapter = HuggingFaceTransformationStep(dataset_config=dataset_config)
+        adapter = HuggingFaceToPipelineDataStep(dataset_config=dataset_config)
         
         sample_data_1 = {"image": sample_pil_image, "results": sample_structured_response}
         sample_data_2 = {"image": sample_pil_image, "results": sample_structured_response}

@@ -10,14 +10,14 @@ class SchematismEntry(BaseModel):
     )
 
     deanery: str | None = Field(
-        None, description="Deanery description, null if not on page"
+        default=None, description="Deanery description, null if not on page"
     )
-    parish: str = Field(..., description="Name of the parish")
+    parish: str | None = Field(default=None, description="Name of the parish")
     dedication: str | None = Field(
-        None, description="Church dedication/patron saint information"
+        default=None, description="Church dedication/patron saint information"
     )
     building_material: str | None = Field(
-        None,
+        default=None,
         description="Building material (e.g., 'lig.' for wood, 'mur.' for brick/stone)",
     )
 

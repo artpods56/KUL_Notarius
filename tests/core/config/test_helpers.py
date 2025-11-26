@@ -8,8 +8,11 @@ from core.config.constants import (
 )
 from core.exceptions import InvalidConfigSubtype
 
+
 @validate_config_arguments
-def _standalone(config_type, config_subtype):  # noqa: ANN001  (type checked by decorator)
+def _standalone(
+    config_type, config_subtype
+):  # noqa: ANN001  (type checked by decorator)
     """Minimal stand-alone target used only for decorator tests."""
     return config_type, config_subtype
 
@@ -20,6 +23,7 @@ class _Dummy:
     @validate_config_arguments
     def method(self, config_type, config_subtype):  # noqa: ANN001
         return config_type, config_subtype
+
 
 def test_standalone_valid():
     """Decorator passes through correct config parameters on a standalone function."""
@@ -35,6 +39,7 @@ def test_method_valid():
     result = obj.method(ConfigType.MODELS, ModelsConfigSubtype.LLM)
     assert result == (ConfigType.MODELS, ModelsConfigSubtype.LLM)
 
+
 def test_missing_arguments():
     """Calling without the required args should raise ``ValueError``."""
 
@@ -43,7 +48,7 @@ def test_missing_arguments():
 
 
 def test_invalid_subtype():
-    """Mismatched subtype (MODELS subtype for DATASET type) should fail."""
+    """Mismatched subtype (MODEL subtype for DATASET type) should fail."""
 
     with pytest.raises(InvalidConfigSubtype):
         _standalone(ConfigType.DATASET, ModelsConfigSubtype.LLM)

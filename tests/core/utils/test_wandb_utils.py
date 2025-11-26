@@ -1,6 +1,6 @@
 import wandb
 
-from schemas import PipelineData
+from schemas.data.pipeline import PipelineData
 from core.utils.wandb_eval import create_table_from_pydantic
 
 PipelineData

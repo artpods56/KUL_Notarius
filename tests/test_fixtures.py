@@ -1,7 +1,7 @@
 
 
 
-from schemas import PipelineData
+from schemas.data.pipeline import PipelineData
 
 
 class TestPipelineFixtures:

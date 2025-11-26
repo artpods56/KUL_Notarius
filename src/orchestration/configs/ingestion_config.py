@@ -1,12 +1,13 @@
-from orchestration.assets.ingest import DatasetConfig
+from orchestration.constants import DataSource, AssetLayer
+from orchestration.utils import AssetKeyHelper
 
-HUGGINGFACE_DATASET_INGESTION_OP_CONFIG = {
-            "huggingface_dataset": {
-                "config": DatasetConfig(
-                    config_name="schematism_dataset_config",
-                    config_type_name="dataset",
-                    config_subtype_name="evaluation",
-                ).model_dump()
-            }
-    }
-
+"""
+Asset: [[ingest.py#raw__hf__dataset]]
+Defined in: [[src/orchestration/assets/extract/ingest.py]]
+Resolves to: stg__huggingface__raw__hf__dataset
+"""
+RAW_HF_DATASET_OP_CONFIG = {
+    AssetKeyHelper.build_prefixed_key(
+        AssetLayer.STG, DataSource.HUGGINGFACE, "raw", "hf", "dataset"
+    ): {"config": {}}
+}

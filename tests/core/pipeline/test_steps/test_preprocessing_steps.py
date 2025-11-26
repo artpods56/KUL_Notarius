@@ -7,7 +7,7 @@ import numpy as np
 from unittest.mock import patch
 
 
-from schemas import PipelineData
+from schemas.data.pipeline import PipelineData
 from core.models.ocr.model import OcrModel
 
 from tests.conftest import sample_page_data

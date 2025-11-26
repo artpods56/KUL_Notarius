@@ -2,8 +2,8 @@ import pandas as pd
 import pytest
 
 from core.pipeline.steps.export import SaveDataFrameStep
-from core.pipeline.steps.transformation import ToPandasDataFrameStep
-from schemas import PipelineData
+from core.pipeline.steps.wrappers import PipelineDataToPandasDataFrameStep
+from schemas.data.pipeline import PipelineData
 from schemas.data.schematism import SchematismPage, SchematismEntry
 
 
@@ -39,7 +39,7 @@ def test_to_dataframe_auto_mode_mixes_sources() -> None:
         metadata={"file_name": "b.jpg"},
     )
 
-    step = ToPandasDataFrameStep(source="auto", include_metadata=True)
+    step = PipelineDataToPandasDataFrameStep(source="auto", include_metadata=True)
     df = step.process([item0, item1])
 
     assert isinstance(df, pd.DataFrame)
@@ -74,7 +74,7 @@ def test_metadata_keys_filtering() -> None:
         metadata={"file_name": "x.jpg", "region": "małopolskie"},
     )
 
-    step = ToPandasDataFrameStep(
+    step = PipelineDataToPandasDataFrameStep(
         source="ground_truth", include_metadata=True, metadata_keys=["file_name"]
     )  # only include file_name
     df = step.process([item])
@@ -92,7 +92,7 @@ def test_empty_dataset_returns_empty_dataframe_with_expected_columns() -> None:
         metadata={},
     )
 
-    step = ToPandasDataFrameStep(
+    step = PipelineDataToPandasDataFrameStep(
         source="ground_truth",
         include_metadata=True,
         metadata_keys=["file_name", "region"],
@@ -124,7 +124,7 @@ def test_explicit_source_selection() -> None:
         metadata={},
     )
 
-    step = ToPandasDataFrameStep(source="ground_truth")
+    step = PipelineDataToPandasDataFrameStep(source="ground_truth")
     df = step.process([item])
 
     assert len(df) == 1
