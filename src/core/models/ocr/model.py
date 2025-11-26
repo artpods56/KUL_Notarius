@@ -7,12 +7,11 @@ import pytesseract
 from structlog import get_logger
 
 from core.caches.ocr_cache import PyTesseractCache
+from schemas.data.cache import PyTesseractCacheItem
 
 from core.caches.utils import get_image_hash
 
 from core.models.base import ConfigurableModel
-from schemas.data.cache import PyTesseractCacheItem
-
 
 def ocr_page(
     pil_image: Image.Image,

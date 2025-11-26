@@ -31,7 +31,7 @@ def mock_provider():
         "core.models.llm.factory.PROVIDER_MAP",
         {"openai": lambda config: mock_provider_instance},
     ):
-        with patch("core.models.llm.factory.LLMCache") as mock_cache_class:
+        with patch("core.models.llm.factory.LLMCache_OLD") as mock_cache_class:
             mock_cache = Mock()
             mock_cache_class.return_value = mock_cache
             yield mock_provider_instance

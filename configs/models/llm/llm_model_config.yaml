@@ -1,5 +1,5 @@
 predictor:
-  api_type: "llama"
+  api_type: "openrouter"
   template_dir: "prompts"
   max_retries: 5
 
