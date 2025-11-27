@@ -3,7 +3,7 @@
   <img src="docs/assets/logo.png" alt="Notarius Logo" width="50%">
 </a>
 
-**KUL | Historical Schematism Indexing & Extraction Engine**
+**Historical Schematism Indexing & Extraction Engine**
 
 [![Python Version](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![beartype](https://raw.githubusercontent.com/beartype/beartype-assets/main/badge/bear-ified.svg)](https://github.com/beartype/beartype)
@@ -15,7 +15,7 @@
 
 ## About
 
-**Notarius** is a specialized  data extraction service built at at the Catholic University of Lublin (KUL). 
+**Notarius** is a specialized  data extraction service built at the Centre for Medieval Studies in Lublin. 
 
 ## Quick Start
 
