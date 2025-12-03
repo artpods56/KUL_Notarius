@@ -7,11 +7,12 @@ metadata.
 """
 
 from pathlib import Path
+from typing import List
 from unittest.mock import patch, mock_open
 
 import pytest
 from PIL import Image
-from typing import List
+
 from core.pipeline.steps.ingestion import (
     ImageFileExtension,
     ImageFileIngestionStep,

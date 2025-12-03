@@ -1,11 +1,9 @@
-import os
 import warnings
 from datetime import datetime
 
 import wandb
 from dotenv import load_dotenv
 from omegaconf import DictConfig
-from sqlalchemy import create_engine
 
 from core.config.constants import ConfigType, DatasetConfigSubtype, ModelsConfigSubtype
 from core.config.helpers import with_configs
@@ -52,15 +50,15 @@ envs = load_dotenv()
 if not envs:
     logger.warning("No environment variables loaded.")
 
-PG_USER = os.getenv("PG_USER")
-PG_PASSWORD = os.getenv("PG_PASSWORD")
-PG_HOST = os.getenv("PG_HOST")
-PG_PORT = os.getenv("PG_PORT")
-PG_NAME = os.getenv("PG_NAME")
-
-sql_engine = create_engine(
-    f"postgresql+psycopg2://{PG_USER}:{PG_PASSWORD}@{PG_HOST}:{PG_PORT}/{PG_NAME}"
-)
+# PG_USER = os.getenv("PG_USER")
+# PG_PASSWORD = os.getenv("PG_PASSWORD")
+# PG_HOST = os.getenv("PG_HOST")
+# PG_PORT = os.getenv("PG_PORT")
+# PG_NAME = os.getenv("PG_NAME")
+#
+# sql_engine = create_engine(
+#     f"postgresql+psycopg2://{PG_USER}:{PG_PASSWORD}@{PG_HOST}:{PG_PORT}/{PG_NAME}"
+# )
 
 wandb_run = wandb.init(
     project="ai-osrodek",

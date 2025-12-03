@@ -1,9 +1,11 @@
 
-from core.caches.base_cache import BaseCache
-from typing import Dict, Optional, Tuple, List, Any
 from pathlib import Path
+from typing import Dict, Optional, Any
 
 from structlog import get_logger
+
+from core.caches.base_cache import BaseCache
+
 
 class BaseOcrCache(BaseCache):
     """Base cache model for OCR models.

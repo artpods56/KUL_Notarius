@@ -1,18 +1,19 @@
-import pytest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+import pytest
+from structlog import get_logger
+
+from core.config.constants import ConfigType, TestsConfigSubtype
+from core.config.helpers import discover_config_files
 from core.config.registry import (
     get_config_schema,
     list_registered_configs,
     validate_config_with_schema,
     get_default_config,
 )
-from core.config.helpers import discover_config_files
-from core.config.constants import ConfigType, TestsConfigSubtype
 from schemas.configs.tests_config import BaseTestsConfig
 
-from structlog import get_logger
 logger = get_logger(__name__)
 
 

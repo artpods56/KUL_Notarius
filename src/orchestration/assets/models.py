@@ -1,7 +1,7 @@
 from typing import Any, Mapping
 
 import dagster as dg
-from dagster import AssetIn, Out, AssetExecutionContext, MetadataValue
+from dagster import AssetIn, AssetExecutionContext, MetadataValue
 from omegaconf import DictConfig, OmegaConf
 
 from core.models.base import ConfigurableModel

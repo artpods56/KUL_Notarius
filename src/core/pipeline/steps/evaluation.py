@@ -5,9 +5,9 @@ This module provides concrete implementations of evaluation steps for the pipeli
 It includes a detailed evaluation step that calculates precision, recall, F1, and accuracy for each field in the predictions_data.
 """
 
+from core.data.metrics import evaluate_json_response
 from core.pipeline.steps.base import SampleProcessingStep
 from schemas.data.pipeline import PipelineData
-from core.data.metrics import evaluate_json_response
 
 
 class SampleEvaluationStep(SampleProcessingStep[PipelineData, PipelineData]):

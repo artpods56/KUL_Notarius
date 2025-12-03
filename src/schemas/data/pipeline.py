@@ -4,7 +4,7 @@ from PIL import Image
 from pydantic import BaseModel, Field
 
 from schemas.data.metrics import PageDataMetrics
-from schemas.data.schematism import SchematismPage, SchematismEntry
+from schemas.data.schematism import SchematismPage
 
 PageDataSourceField = Literal[
     "ground_truth",

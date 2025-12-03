@@ -8,14 +8,12 @@ import wandb
 from PIL import Image
 from dagster import ConfigurableResource
 from omegaconf import DictConfig
-from wandb.apis.importers.wandb import WandbRun
 
 from core.caches.utils import get_image_hash
-from core.config.manager import ConfigManager
-from core.utils.shared import PDF_SOURCE_DIR
-
 from core.config.constants import ConfigType, ConfigSubTypes
+from core.config.manager import ConfigManager
 from core.config.manager import get_config_manager
+from core.utils.shared import PDF_SOURCE_DIR
 
 
 class PdfFilesResource(ConfigurableResource):

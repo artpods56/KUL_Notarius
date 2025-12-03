@@ -3,10 +3,11 @@ Configs for assets defined in this file lives in [[transformation_config.py]]
 """
 
 import random
-from typing import Literal, Any, Mapping
+from typing import Any, Mapping
 
-import pandas as pd
 import dagster as dg
+import pandas as pd
+import structlog
 from dagster import (
     AssetExecutionContext,
     MetadataValue,
@@ -16,9 +17,6 @@ from dagster import (
 from datasets import Dataset
 
 from orchestration.constants import DataSource, AssetLayer, ResourceGroup, Kinds
-
-import structlog
-
 from orchestration.resources import ImageStorageResource
 from schemas.data.dataset import BaseHuggingFaceDatasetSchema, ETLSpecificDatasetFields
 from schemas.data.pipeline import (

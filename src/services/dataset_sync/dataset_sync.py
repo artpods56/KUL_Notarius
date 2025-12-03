@@ -1,16 +1,17 @@
-import os
 import json
-import time
-import signal
-import sys
 import logging
+import os
+import signal
 import subprocess
-from datetime import datetime
+import sys
+import time
 from hashlib import sha1
 from pathlib import Path
+
 from minio import Minio
 
 from config import setup_logging, load_config_from_env
+
 
 def run_conversion(config, commit_message_metadata: str):
     """

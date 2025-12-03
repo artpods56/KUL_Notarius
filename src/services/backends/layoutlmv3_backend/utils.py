@@ -1,5 +1,6 @@
 import logging
-from typing import List, Tuple
+from typing import Tuple
+
 import cv2 as cv
 from PIL import Image
 

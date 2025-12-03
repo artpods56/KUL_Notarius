@@ -1,11 +1,13 @@
 
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Literal, Optional, cast, overload
+from typing import Any, Dict, List, Optional, cast
 
-from core.exceptions import ConfigNotRegisteredError
 from hydra import compose, initialize_config_dir
 from omegaconf import DictConfig, OmegaConf
+from structlog import get_logger
 
+from core.config.constants import ConfigTypeMapping
+from core.config.helpers import validate_config_arguments, discover_config_files
 from core.config.registry import (
     ConfigSubTypes,
     ConfigType,
@@ -14,11 +16,8 @@ from core.config.registry import (
     list_registered_configs,
     validate_config_with_schema
 )
-from core.config.helpers import validate_config_arguments, discover_config_files
-from core.config.constants import ConfigTypeMapping
 from core.utils.shared import CONFIGS_DIR
 
-from structlog import get_logger
 logger = get_logger(__name__)
 
 def config_to_dict(config: DictConfig) -> Dict[str, Any]:

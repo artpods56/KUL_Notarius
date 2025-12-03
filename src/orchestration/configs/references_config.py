@@ -1,5 +1,5 @@
 from orchestration.configs.shared import ConfigReference
-from orchestration.constants import DataSource, AssetLayer
+from orchestration.constants import AssetLayer
 from orchestration.utils import AssetKeyHelper
 
 

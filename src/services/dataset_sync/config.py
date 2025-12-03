@@ -3,10 +3,11 @@ Configuration management for data sync and conversion scripts.
 Loads configuration from .env file and merges with CLI arguments.
 """
 
-import os
 import logging
+import os
 import sys
 from pathlib import Path
+
 from dotenv import load_dotenv
 
 

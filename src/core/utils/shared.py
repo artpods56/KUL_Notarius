@@ -16,8 +16,8 @@ This approach keeps containers lightweight (no need to mount or COPY the full
 developer machines.
 """
 
-from pathlib import Path
 import os
+from pathlib import Path
 
 
 def _env_override() -> Path | None:

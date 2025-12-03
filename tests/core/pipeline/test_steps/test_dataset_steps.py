@@ -3,9 +3,9 @@ from typing import List
 
 import pytest
 
+from core.pipeline.steps.base import DatasetProcessingStep
 from core.pipeline.steps.postprocessing import DeaneryFillingStep
 from schemas.data.pipeline import PipelineData
-from core.pipeline.steps.base import DatasetProcessingStep
 
 
 class CustomDatasetStep(DatasetProcessingStep):

@@ -5,24 +5,19 @@ Configs for assets defined in this file lives in [[ingestion_config.py]]
 import random
 from typing import Any, cast
 
+import dagster as dg
 from dagster import AssetExecutionContext, MetadataValue, AssetIn
 from datasets import Dataset
-from omegaconf import OmegaConf, DictConfig
+from omegaconf import DictConfig
 from pymupdf import pymupdf
+from structlog import get_logger
 
 from core.data.utils import get_dataset
-from orchestration.configs.shared import ConfigReference
-from schemas.data.pipeline import BaseDataItem
-import dagster as dg
-
+from orchestration.constants import DataSource, AssetLayer, ResourceGroup, Kinds
 from orchestration.resources import (
     PdfFilesResource,
-    ConfigManagerResource,
-    ImageStorageResource,
 )
-from orchestration.constants import DataSource, AssetLayer, ResourceGroup, Kinds
-
-from structlog import get_logger
+from schemas.data.pipeline import BaseDataItem
 
 logger = get_logger(__name__)
 

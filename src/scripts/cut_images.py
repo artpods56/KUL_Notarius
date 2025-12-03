@@ -1,8 +1,8 @@
-import os
-from PIL import Image
-import argparse
-from tqdm import tqdm
 import logging
+import os
+
+from PIL import Image
+from tqdm import tqdm
 
 # Configure logging
 logging.basicConfig(

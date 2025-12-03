@@ -36,19 +36,18 @@ Notes:
     ```
 """
 
-import json
 from itertools import chain
 from pathlib import Path
 from typing import cast
 
 import structlog
 from datasets import Dataset, Features, List
-from datasets.features import Sequence, Value, Image
+from datasets.features import Value, Image
 from dotenv import load_dotenv
 
 from core.data.schematism_parser import ShapefileGenerator, ShapefileGeneratorConfig
-from core.utils.shared import REPOSITORY_ROOT, TMP_DIR
 from core.utils.logging import setup_logging
+from core.utils.shared import REPOSITORY_ROOT, TMP_DIR
 
 setup_logging()
 load_dotenv()

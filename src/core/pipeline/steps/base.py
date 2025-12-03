@@ -17,8 +17,6 @@ from collections.abc import Callable
 from typing import Iterator, get_type_hints, Iterable, List, Any, get_origin, get_args
 
 from structlog import BoundLogger, get_logger
-from structlog.typing import BindableLogger
-from tqdm import tqdm
 
 
 class ProcessingStep[InT, OutT](ABC):

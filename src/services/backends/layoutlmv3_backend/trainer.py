@@ -1,6 +1,7 @@
 import torch
-from losses import FocalLoss
 from transformers.trainer import Trainer
+
+from losses import FocalLoss
 
 
 class FocalLossTrainer(Trainer):

@@ -1,12 +1,11 @@
-import os
 import warnings
 from datetime import datetime
 
 import wandb
 from dotenv import load_dotenv
 from omegaconf import DictConfig
-from sqlalchemy import create_engine
 
+import schemas.configs  # type: ignore
 from core.config.constants import ConfigType, DatasetConfigSubtype, ModelsConfigSubtype
 from core.config.helpers import with_configs
 from core.data.filters import filter_schematisms
@@ -21,9 +20,6 @@ from core.pipeline.pipeline import (
     DatasetProcessingPhase,
 )
 from core.pipeline.steps.evaluation import SampleEvaluationStep
-from core.pipeline.steps.export import (
-    SaveDataFrameStep,
-)
 from core.pipeline.steps.ingestion import (
     HuggingFaceIngestionStep,
     FilterMapSpec,
@@ -40,12 +36,9 @@ from core.pipeline.steps.prediction import (
 )
 from core.pipeline.steps.wrappers import (
     HuggingFaceToPipelineDataStep,
-    DataFrameSchemaMappingStep,
 )
 from core.utils.logging import setup_logging
 from core.utils.shared import TMP_DIR
-
-import schemas.configs # type: ignore
 
 setup_logging()
 
@@ -63,7 +56,6 @@ wandb_run = wandb.init(
     mode="online",
     dir=TMP_DIR,
 )
-
 
 warnings.filterwarnings(
     "ignore", category=FutureWarning, module="transformers.modeling_utils"
@@ -194,38 +186,38 @@ def main(
         depends_on=evaluation_phase,
     )
 
-    export_phase = DatasetProcessingPhase(
-        name="export",
-        steps=[
-            # ToPandasDataFrameStep(source="parsed"),
-            SaveDataFrameStep(
-                file_path=TMP_DIR / "saved.csv", file_format="csv", overwrite=True
-            ),
-            DataFrameSchemaMappingStep(
-                mapping={
-                    "parish": "parafia",
-                    "deanery": "dekanat",
-                    "dedication": "wezwanie",
-                    "building_material": "material",
-                    "page_number": "strona_p",
-                },
-                strict=True,
-            ),
-            SaveDataFrameStep(
-                file_path=TMP_DIR / "saved_mapped.csv",
-                file_format="csv",
-                overwrite=True,
-            ),
-        ],
-        description="Exporting the data to file and database.",
-        depends_on=logging_phase,
-    )
+    # export_phase = DatasetProcessingPhase(
+    #     name="export",
+    #     steps=[
+    #         # ToPandasDataFrameStep(source="parsed"),
+    #         # SaveDataFrameStep(
+    #         #     file_path=TMP_DIR / "saved.csv", file_format="csv", overwrite=True
+    #         # ),
+    #         # DataFrameSchemaMappingStep(
+    #         #     mapping={
+    #         #         "parish": "parafia",
+    #         #         "deanery": "dekanat",
+    #         #         "dedication": "wezwanie",
+    #         #         "building_material": "material",
+    #         #         "page_number": "strona_p",
+    #         #     },
+    #         #     strict=True,
+    #         # ),
+    #         # SaveDataFrameStep(
+    #         #     file_path=TMP_DIR / "saved_mapped.csv",
+    #         #     file_format="csv",
+    #         #     overwrite=True,
+    #         # ),
+    #     ],
+    #     description="Exporting the data to file and database.",
+    #     depends_on=logging_phase,
+    # )
     pipeline.add_phases(
         [
             prediction_phase,
             ingestion_phase,
             processing_phase,
-            export_phase,
+            # export_phase,
             evaluation_phase,
             logging_phase,
         ]

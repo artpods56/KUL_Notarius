@@ -3,11 +3,10 @@ from datetime import datetime
 import dagster as dg
 from dagster import mem_io_manager, in_process_executor
 
-from core.utils.shared import OUTPUTS_DIR, TMP_DIR
-
 import core.data.filters  # type: ignore
 import schemas.configs  # type: ignore
-
+from core.utils.shared import OUTPUTS_DIR, TMP_DIR
+from orchestration.jobs.complete_pipeline import complete_pipeline_job
 from orchestration.jobs.exporting import exporting_assets, exporting_job
 from orchestration.jobs.ingestion import (
     dataset_config_assets,
@@ -21,15 +20,13 @@ from orchestration.jobs.prediction import (
     prediction_assets,
     prediction_job,
 )
-from orchestration.jobs.complete_pipeline import complete_pipeline_job
-
+from orchestration.resources import ConfigManagerResource
 from orchestration.resources import (
     OpRegistry,
     ExcelWriterResource,
     WandBRunResource,
     ImageStorageResource,
 )
-from orchestration.resources import ConfigManagerResource
 
 defs = dg.Definitions(
     assets=[

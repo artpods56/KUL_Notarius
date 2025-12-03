@@ -1,5 +1,6 @@
+from typing import Dict
+
 import pytest
-from typing import Dict, List
 
 from core.data.utils import JSONAligner, align_json_data
 from schemas.data.schematism import SchematismEntry

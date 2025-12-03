@@ -5,7 +5,7 @@ from schemas.data.cache import LLMCacheItem
 
 
 def test_llm_cache_persistence(tmp_path: Path):
-    """Verify that values stored in LLMCache persist across instances and are retrievable."""
+    """Verify that values stored in LLMCache_OLD persist across instances and are retrievable."""
 
     cache_root = tmp_path / "cache_root"
 

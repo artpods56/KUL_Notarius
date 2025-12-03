@@ -4,21 +4,18 @@ from datetime import datetime
 from typing import cast
 
 import hydra
+import wandb
+from dataset.filters import filter_schematisms, merge_filters  # Updated import
+from dataset.maps import convert_to_grayscale, map_labels, merge_maps  # Updated import
+from dataset.stats import compute_dataset_stats  # Updated import
 from datasets import Dataset, DownloadMode, load_dataset
 from dotenv import load_dotenv
-from omegaconf import DictConfig
-from dataset.stats import compute_dataset_stats # Updated import
-from transformers import AutoProcessor, LayoutLMv3ForTokenClassification
-
-import wandb
-from dataset.filters import filter_schematisms, merge_filters # Updated import
-from dataset.maps import convert_to_grayscale, map_labels, merge_maps # Updated import
 from lmv3.utils.config import config_to_dict
 from lmv3.utils.inference_utils import get_model_and_processor
 # Updated imports for load_labels and prepare_dataset, get_device remains
 from lmv3.utils.utils import get_device
-from dataset.utils import load_labels, prepare_dataset
 from lmv3.utils.wandb_utils import log_predictions_to_wandb
+from omegaconf import DictConfig
 
 load_dotenv()
 

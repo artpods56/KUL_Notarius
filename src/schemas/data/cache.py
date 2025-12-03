@@ -1,7 +1,9 @@
-from pydantic import BaseModel
 from typing import Dict, Optional, Tuple, Any
 
+from pydantic import BaseModel
+
 from schemas.data.schematism import SchematismPage
+
 
 class BaseCacheItem(BaseModel):
     metadata: Optional[Dict[str,Any]] = None  # Store metadata as a dictionary for flexibility

@@ -1,8 +1,6 @@
-from pydantic import ValidationError
 import pytest
 from omegaconf import DictConfig
-
-from core.config.registry import get_config_schema
+from pydantic import ValidationError
 
 from core.config.constants import (
     ConfigType,
@@ -11,6 +9,7 @@ from core.config.constants import (
     DatasetConfigSubtype,
     WandbConfigSubtype,
 )
+from core.config.registry import get_config_schema
 from core.exceptions import ConfigNotRegisteredError
 
 

@@ -1,6 +1,5 @@
-from pydantic import BaseModel
-from typing import Dict, Type, TypeVar, Union
 from enum import Enum
+from typing import Dict, Type, Union
 
 from core.exceptions import InvalidConfigType, InvalidConfigSubtype
 

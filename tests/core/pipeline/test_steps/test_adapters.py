@@ -1,10 +1,12 @@
 import json
 
-from core.pipeline.steps.wrappers import HuggingFaceToPipelineDataStep
 import pytest
 from omegaconf import DictConfig, OmegaConf
+
+from core.pipeline.steps.wrappers import HuggingFaceToPipelineDataStep
 from schemas.data.pipeline import PipelineData
 from schemas.data.schematism import SchematismPage
+
 
 class TestHFIngestionAdapter:
     """Tests for the HFIngestionAdapter class."""
