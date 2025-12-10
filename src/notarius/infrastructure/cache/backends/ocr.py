@@ -1,132 +1,116 @@
 """OCR cache backend and key generator for cached engine pattern."""
 
-import hashlib
-import json
+from __future__ import annotations
 
-from PIL.Image import Image
-from typing import final, override, TypedDict, Unpack
+from typing import final, override
 
 from structlog import get_logger
 
-from notarius.application.ports.outbound.cached_engine import CacheBackend
-from notarius.infrastructure.cache.storage import PyTesseractCache, get_image_hash
-from notarius.infrastructure.cache.storage.utils import get_text_hash
+from notarius.application.ports.outbound.cached_engine import (
+    CacheBackend,
+    CacheKeyGenerator,
+)
+from notarius.infrastructure.cache.adapters.ocr import PyTesseractCache
+from notarius.infrastructure.cache.storage.utils import get_image_hash
 from notarius.infrastructure.ocr.engine_adapter import OCRRequest, OCRResponse
 
 logger = get_logger(__name__)
 
 
-OCRCacheKeyGeneratorPayload = TypedDict(
-    "OCRCacheKeyGeneratorPayload",
-    {"image": Image, "config": str},
-)
-
-
 @final
-class OCRCacheKeyGenerator:
-    """Generate cache keys for OCR requests."""
+class OCRCacheKeyGenerator(CacheKeyGenerator[OCRRequest]):
+    """Generate deterministic cache keys for OCR requests.
 
-    def generate_key(self, **payload: Unpack[OCRCacheKeyGeneratorPayload]) -> str:
-        """Generate cache key from image and mode.
+    Keys are based on image content (hash) only, since OCR mode is
+    already encoded in the cache instance (different language = different cache).
+    """
+
+    @override
+    def generate_key(self, request: OCRRequest) -> str:
+        """Generate cache key from image.
 
         Args:
             request: OCR request containing image and mode
 
         Returns:
-            Cache key string
+            Image hash as cache key
         """
-        image = payload["image"]
-        config = payload["config"]
-
-        generator_payload = {"image": image, "config": config}
-
-        payload_str = json.dumps(generator_payload, sort_keys=True)
-        return hashlib.sha256(payload_str.encode()).hexdigest()
+        return get_image_hash(request.input)
 
 
 @final
 class OCRCacheBackend(CacheBackend[OCRResponse]):
-    """Cache backend for OCR responses using PyTesseractCache directly."""
+    """Cache backend adapter for OCR responses.
 
-    def __init__(self, cache: OCRResponse):
-        """Initialize with PyTesseractCache instance.
+    This adapter bridges the CachedEngine protocol with PyTesseractCache storage,
+    using pickle serialization for automatic handling of OCR response types.
+
+    The cache stores complete OCRResponse objects including:
+    - Simple text-only results
+    - Structured results with words and bounding boxes
+    """
+
+    def __init__(self, cache: PyTesseractCache, key_generator: OCRCacheKeyGenerator):
+        """Initialize the cache backend.
 
         Args:
-            cache: The PyTesseractCache instance for storage operations
+            cache: PyTesseractCache instance for storage
+            key_generator: Key generator for creating cache keys from requests
         """
         self.cache = cache
+        self.key_generator = key_generator
 
     @override
     def get(self, key: str) -> OCRResponse | None:
-        """Retrieve cached OCR response.
+        """Retrieve OCRResponse from cache.
 
         Args:
-            key: Cache key to retrieve
+            key: Cache key
 
         Returns:
-            OCRResponse if found, None otherwise
+            Cached OCRResponse if found, None otherwise
         """
-        try:
-            cached_item = self.cache.get(key)
-            if not cached_item:
-                return None
-            else:
-                return cached_item
-
-        except Exception as e:
-            logger.error(
-                "Failed to reconstruct OCRResponse from cache",
-                key=key[:16],
-                error=str(e),
-            )
-            return None
+        return self.cache.get(key)
 
     @override
     def set(self, key: str, value: OCRResponse) -> bool:
-        """Store OCR response in cache.
+        """Store OCRResponse in cache.
 
         Args:
             key: Cache key
             value: OCRResponse to cache
 
         Returns:
-            True if successfully cached, False otherwise
+            True if cached successfully
         """
-        try:
-            # Extract text from the response
-            text = ""
-            words = None
-            bbox = None
+        return self.cache.set(key, value)
 
-            if hasattr(value.output, "text"):
-                text = value.output.text
-            if hasattr(value.output, "words"):
-                words = value.output.words
-            if hasattr(value.output, "bboxes"):
-                bbox = value.output.bboxes
 
-            from notarius.schemas.data.cache import (
-                PyTesseractCacheItem,
-                PyTesseractContent,
-            )
+def create_ocr_cache_backend(
+    language: str = "lat+pol+rus",
+) -> tuple[OCRCacheBackend, OCRCacheKeyGenerator]:
+    """Create an OCR cache backend with key generator.
 
-            # Create cache item
-            cache_item = PyTesseractCacheItem(
-                content=PyTesseractContent(
-                    text=text,
-                    bbox=bbox,
-                    words=words,
-                    language=self.cache.language,
-                )
-            )
+    This is a convenience factory for setting up OCR caching.
 
-            # Store in cache
-            return self.cache.set(key=key, value=cache_item)
+    Args:
+        language: OCR language configuration (default: "lat+pol+rus")
 
-        except Exception as e:
-            logger.error(
-                "Failed to cache OCRResponse",
-                key=key[:16],
-                error=str(e),
-            )
-            return False
+    Returns:
+        Tuple of (cache_backend, key_generator)
+
+    Example:
+        >>> backend, keygen = create_ocr_cache_backend("eng")
+        >>> # Use with CachedEngine
+        >>> cached_engine = CachedEngine(
+        ...     engine=ocr_engine,
+        ...     cache_backend=backend,
+        ...     key_generator=keygen,
+        ...     enabled=True
+        ... )
+    """
+    cache = PyTesseractCache(language=language)
+    key_generator = OCRCacheKeyGenerator()
+    backend = OCRCacheBackend(cache=cache, key_generator=key_generator)
+
+    return backend, key_generator
