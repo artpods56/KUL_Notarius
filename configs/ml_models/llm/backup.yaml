@@ -1,5 +1,5 @@
 predictor:
-  api_type: "openrouter"
+  api_type: "llama"
   template_dir: "prompts"
   max_retries: 5
 
@@ -18,7 +18,7 @@ interfaces:
   llama:
     model: "gemma-3-27b-it-Q4_K_M"
     structured_output: true
-    base_url: "https://ls.kpi.kul.pl/v1"
+    base_url: "https://llamaswap.ls.kpi.kul.pl/v1"
     api_key_env_var: "LLAMA_API_KEY"
     template_dir: "prompts"
     api_kwargs:

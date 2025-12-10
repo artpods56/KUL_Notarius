@@ -1,12 +1,4 @@
-path: "artpods56/KUL_IDUB_EcclessiaSchematisms"
-name: "default"
-force_download: false
-trust_remote_code: false
-keep_in_memory: false
-num_proc: 0
-seed: 42
-split: "train"
-streaming: false
+
 
 column_map:
   image_column: "image"
@@ -29,14 +21,14 @@ positive_samples: 5
 negative_samples: 5
 full_schematisms:
   #  - "lublin_1870"
-  #  - "plock_1880"
-  #  - "plock_1882"
-  #  - "warszawa_1870"
-  #  - "warszawa_1872"
-  #  - "sejny_1874"
-  - "wloclawek_1872"
-#  - "wloclawek_1873"
-#  - "tarnow_1870"
+  - "plock_1880"
+  #- "plock_1882"
+  - "warszawa_1870"
+  - "warszawa_1872"
+  #- "sejny_1874"
+  # - "wloclawek_1872"
+  # - "wloclawek_1873"
+  - "tarnow_1870"
 #  - "chelmno_1871"
 
 partial_schematisms: [ ]

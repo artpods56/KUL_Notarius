@@ -1,9 +1,8 @@
-path: "artpods56/KUL_IDUB_EcclessiaSchematisms"
-name: "default"
+path: ''
+name: default_dataset
 force_download: false
-trust_remote_code: false
+trust_remote_code: true
 keep_in_memory: false
-num_proc: 0
-seed: 42
-split: "train"
+num_proc: 8
+split: train
 streaming: false
