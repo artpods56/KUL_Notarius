@@ -5,20 +5,20 @@ ConfigurableEngine, moving caching logic out of use cases and into the
 infrastructure layer where it belongs.
 """
 
-from abc import ABC, abstractmethod
-from collections.abc import Mapping
-from typing import Protocol, TypedDict, Unpack, final, runtime_checkable, Any
+from typing import Never, Protocol, final, runtime_checkable, Any, cast, override
 
 from pydantic import BaseModel
 from structlog import get_logger
 
 from notarius.application.ports.outbound.engine import ConfigurableEngine
 from notarius.domain.protocols import BaseRequest, BaseResponse
+from notarius.shared.logger import Logger
 
-logger = get_logger(__name__)
+logger = cast(Logger, get_logger(__name__))
+
 
 @runtime_checkable
-class CacheKeyGenerator[RequestT: BaseRequest](Protocol):
+class CacheKeyGenerator[RequestT: BaseRequest[Any]](Protocol):
     """Protocol for generating cache keys from requests."""
 
     def generate_key(self, request: RequestT) -> str:
@@ -27,23 +27,23 @@ class CacheKeyGenerator[RequestT: BaseRequest](Protocol):
 
 
 @runtime_checkable
-class CacheBackend[ResponseT: BaseResponse](Protocol):
+class CacheBackend[ResponseT: BaseResponse[Any]](Protocol):
     """Protocol for cache storage backends."""
 
     def get(self, key: str) -> ResponseT | None:
-        """Retrieve cached response by key."""
+        """Retrieve cached structured_response by key."""
         ...
 
     def set(self, key: str, value: ResponseT) -> bool:
-        """Store response in cache."""
+        """Store structured_response in cache."""
         ...
 
 
 @final
 class CachedEngine[
     ConfigT: BaseModel,
-    RequestT: BaseRequest,
-    ResponseT: BaseResponse,
+    RequestT: BaseRequest[object],
+    ResponseT: BaseResponse[object],
 ](ConfigurableEngine[ConfigT, RequestT, ResponseT]):
     """
     Decorator that adds caching capabilities to any ConfigurableEngine.
@@ -65,7 +65,7 @@ class CachedEngine[
         )
 
         # Use it exactly like the original engine
-        response = cached_engine.process(request)
+        structured_response = cached_engine.process(request)
         ```
     """
 
@@ -92,13 +92,15 @@ class CachedEngine[
         self._stats = {"hits": 0, "misses": 0, "errors": 0}
 
     @classmethod
-    def from_config(cls, config: ConfigT, *args, **kwargs):
+    @override
+    def from_config(cls, config: ConfigT) -> Never:
         """This method should not be called on the wrapper."""
         raise NotImplementedError(
             "CachedEngine should be instantiated with an existing engine, ",
             "not from config directly",
         )
 
+    @override
     def process(self, request: RequestT) -> ResponseT:
         """
         Process request with caching.
@@ -110,10 +112,8 @@ class CachedEngine[
             return self._engine.process(request)
 
         try:
-            # Generate cache key
             cache_key = self._key_generator.generate_key(request)
 
-            # Check cache
             cached_response = self._cache.get(cache_key)
             if cached_response is not None:
                 self._stats["hits"] += 1
@@ -138,7 +138,7 @@ class CachedEngine[
             success = self._cache.set(cache_key, response)
             if success:
                 logger.debug(
-                    "Cached response",
+                    "Cached structured_response",
                     key=cache_key[:16],
                     engine_type=type(self._engine).__name__,
                 )
@@ -146,7 +146,6 @@ class CachedEngine[
             return response
 
         except Exception as e:
-            # Log error but don't fail the request
             self._stats["errors"] += 1
             logger.warning(
                 "Cache error, falling back to direct processing",

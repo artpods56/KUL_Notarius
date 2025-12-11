@@ -40,11 +40,6 @@ class CompletionResult[T: BaseModel](BaseResponse[BaseProviderResponse[T]]):
     conversation: Conversation
 
     @property
-    def text(self) -> str:
-        """Get the text content of the output."""
-        return self.output.to_string()
-
-    @property
     def updated_conversation(self) -> Conversation:
         """Get the input with the assistant's output added.
 

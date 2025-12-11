@@ -22,8 +22,9 @@ from openai.types.responses import (
     ResponseInputItemParam,
     ResponseInputImageParam,
     ResponseInputTextParam,
+    Response,
 )
-
+Response
 from notarius.domain.entities.messages import ChatMessage, TextContent, ImageContent
 from notarius.infrastructure.llm.prompt_manager import Jinja2PromptRenderer
 

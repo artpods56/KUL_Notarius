@@ -9,18 +9,7 @@ from notarius.application.use_cases.inference.add_llm_preds_to_dataset import (
     PredictDatasetWithLLM,
     PredictWithLLMRequest,
 )
-from notarius.infrastructure.cache.storage import (
-    LLMCache,
-    LMv3Cache,
-    PyTesseractCache,
-)
-
 from notarius.infrastructure.ocr.engine_adapter import OCRMode
-from notarius.infrastructure.persistence.llm_cache_repository import LLMCacheRepository
-from notarius.infrastructure.persistence.lmv3_cache_repository import (
-    LMv3CacheRepository,
-)
-from notarius.infrastructure.persistence.ocr_cache_repository import OCRCacheRepository
 from notarius.orchestration.constants import (
     AssetLayer,
     ResourceGroup,
@@ -50,7 +39,8 @@ from notarius.application.use_cases.inference.add_lmv3_preds_to_dataset import (
 
 class OcrConfig(dg.Config):
     mode: OCRMode = "text"
-    overwrite: bool = False
+    language: str = "lat+pol+rus"
+    enable_cache: bool = True
 
 
 @dg.asset(
@@ -67,22 +57,24 @@ class OcrConfig(dg.Config):
 async def pred__ocr_enriched_dataset__pydantic(
     context: AssetExecutionContext,
     dataset: BaseDataset[BaseDataItem],
-    config: OcrConfig,
     image_storage: ImageStorageResource,
     ocr_engine: OCREngineResource,
 ):
     ocr_model = ocr_engine.get_engine()
 
+    config = ocr_model.config
+
+    # Use new CachedEngine pattern
     use_case = EnrichDatasetWithOCR(
         ocr_engine=ocr_model,
         image_storage=image_storage,
-        cache_repository=OCRCacheRepository(PyTesseractCache()),
+        language=config.language,
+        enable_cache=config.enable_cache,
     )
 
     request = EnrichWithOCRRequest(
         dataset=dataset,
-        mode=config.mode,
-        overwrite=config.overwrite,
+        mode="text",
     )
     response = await use_case.execute(request)
 
@@ -101,6 +93,7 @@ async def pred__ocr_enriched_dataset__pydantic(
                 len([item for item in response.dataset.items if item.text])
             ),
             "ocr_executions": MetadataValue.int(response.ocr_executions),
+            "cache_hits": MetadataValue.int(response.cache_hits),
         }
     )
 
@@ -108,8 +101,8 @@ async def pred__ocr_enriched_dataset__pydantic(
 
 
 class LMv3Config(dg.Config):
-    raw_predictions: bool = False
-    overwrite: bool = False
+    checkpoint: str = "layoutlmv3_focalloss_4000"
+    enable_cache: bool = True
 
 
 @dg.asset(
@@ -127,23 +120,19 @@ async def pred__lmv3_enriched_dataset__pydantic(
     image_storage: ImageStorageResource,
     lmv3_engine: LMv3EngineResource,
 ):
-    # Get the actual _engine instance from the resource
+    # Get the actual engine instance from the resource
     lmv3_model = lmv3_engine.get_engine()
 
-    # Create use case
+    # Use new CachedEngine pattern
     use_case = EnrichDatasetWithLMv3(
         lmv3_engine=lmv3_model,
         image_storage=image_storage,
-        cache_repository=LMv3CacheRepository(
-            cache=LMv3Cache(checkpoint="layoutlmv3_focalloss_4000")
-        ),
+        checkpoint=config.checkpoint,
+        enable_cache=config.enable_cache,
     )
 
     # Execute use case
-    request = EnrichWithLMv3Request(
-        dataset=dataset,
-        overwrite=config.overwrite,
-    )
+    request = EnrichWithLMv3Request(dataset=dataset)
     response = await use_case.execute(request)
 
     # Add Dagster metadata
@@ -151,7 +140,8 @@ async def pred__lmv3_enriched_dataset__pydantic(
 
     context.add_asset_metadata(
         {
-            "raw_predictions": MetadataValue.bool(config.raw_predictions),
+            "checkpoint": MetadataValue.text(config.checkpoint),
+            "cache_enabled": MetadataValue.bool(config.enable_cache),
         }
     )
 
@@ -162,6 +152,7 @@ async def pred__lmv3_enriched_dataset__pydantic(
                 {k: v for k, v in random_sample.model_dump().items() if k != "image"}
             ),
             "lmv3_executions": MetadataValue.int(response.lmv3_executions),
+            "cache_hits": MetadataValue.int(response.cache_hits),
         }
     )
 
@@ -172,6 +163,7 @@ class LLMConfig(dg.Config):
     system_prompt: str = "system.j2"
     user_prompt: str = "user.j2"
     use_lmv3_hints: bool = True
+    enable_cache: bool = True
 
 
 @dg.asset(
@@ -197,14 +189,15 @@ async def pred__llm_enriched_dataset__pydantic(
     improved predictions, optionally using the LMv3 predictions as hints.
     """
 
-    # Get the actual _engine instance from the resource
+    # Get the actual engine instance from the resource
     llm_model = llm_engine.get_engine()
 
-    # Create use case
+    # Use new CachedEngine pattern
     use_case = PredictDatasetWithLLM(
         llm_engine=llm_model,
         image_storage=image_storage,
-        cache_repository=LLMCacheRepository(cache=LLMCache(llm_model.used_model)),
+        model_name=llm_model.used_model,
+        enable_cache=config.enable_cache,
     )
 
     # Execute use case
@@ -229,6 +222,8 @@ async def pred__llm_enriched_dataset__pydantic(
             "system_prompt": MetadataValue.text(config.system_prompt),
             "user_prompt": MetadataValue.text(config.user_prompt),
             "use_lmv3_hints": MetadataValue.bool(config.use_lmv3_hints),
+            "model_name": MetadataValue.text(llm_model.used_model),
+            "cache_enabled": MetadataValue.bool(config.enable_cache),
         }
     )
 
@@ -247,6 +242,7 @@ async def pred__llm_enriched_dataset__pydantic(
                 else None
             ),
             "llm_executions": MetadataValue.int(response.llm_executions),
+            "cache_hits": MetadataValue.int(response.cache_hits),
             "success_rate": MetadataValue.float(response.success_rate),
         }
     )

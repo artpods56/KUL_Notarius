@@ -1,16 +1,18 @@
 import abc
 from dataclasses import dataclass
+from tkinter import N
+from typing import Literal
+
+from pydantic import BaseModel
 
 from notarius.domain.entities.messages import ChatMessage, TextContent
 
 
 @dataclass(frozen=True)
-class BaseProviderResponse[T](abc.ABC):
-    response: T
+class BaseProviderResponse[T: BaseModel](abc.ABC):
+    structured_response: T | None
+    text_response: str | None
 
-    @abc.abstractmethod
-    def to_string(self) -> str:
-        raise NotImplementedError
 
     def to_message(self) -> ChatMessage:
         """Convert the output to a ChatMessage for input history.
@@ -18,7 +20,22 @@ class BaseProviderResponse[T](abc.ABC):
         Returns:
             ChatMessage with role="assistant" and text content
         """
-        return ChatMessage(
-            role="assistant",
-            content=[TextContent(text=self.to_string())],
-        )
+
+        if self.structured_response:
+           return ChatMessage(
+               role="assistant",
+               content=[
+                   TextContent(text=self.structured_response.model_dump_json() or "")
+               ],
+           )
+        else:
+            return ChatMessage(
+                role="assistant",
+                content=[
+                    TextContent(
+                        text=self.text_response or ""
+                    )
+                ]
+            )
+
+

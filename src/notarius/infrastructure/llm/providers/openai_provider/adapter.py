@@ -72,13 +72,20 @@ class OpenAICompatibleProvider(LLMProvider[OpenAI]):
                     input=openai_messages,
                     text_format=text_format,
                 )
+
+                return OpenAIResponse[ResponseT](
+                    structured_response=response.output_parsed,
+                    text_response=None
+                )
             else:
                 response = self.client.responses.create(
                     model=self.config.model,
                     input=openai_messages,
                 )
 
-            return OpenAIResponse[ResponseT](response)
+                return OpenAIResponse[ResponseT](
+                    structured_response=None, text_response=response.output_text
+                )
 
         except APIConnectionError as e:
             logger.error(f"Connection error while generating output from OpenAI: {e}")

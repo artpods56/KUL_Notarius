@@ -43,7 +43,7 @@ class OCRCacheBackend(CacheBackend[OCRResponse]):
     """Cache backend adapter for OCR responses.
 
     This adapter bridges the CachedEngine protocol with PyTesseractCache storage,
-    using pickle serialization for automatic handling of OCR response types.
+    using pickle serialization for automatic handling of OCR structured_response types.
 
     The cache stores complete OCRResponse objects including:
     - Simple text-only results

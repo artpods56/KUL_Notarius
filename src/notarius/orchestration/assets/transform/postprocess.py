@@ -114,8 +114,6 @@ def pred__deanery_filled_dataset__pydantic(
 
 class JSONAlignmentConfig(dg.Config):
     """Configuration for JSON alignment operation."""
-
-    backend: str = "hungarian"
     threshold: float = 0.5
     weights: dict[str, float] = {
         "deanery": 1.0,
@@ -125,12 +123,10 @@ class JSONAlignmentConfig(dg.Config):
     }
 
 
-ALIGNER_BACKENDS = {"greedy": JSONAligner, "hungarian": FlatHungarianAligner}
-
-
 def asset_factory__gt_aligned_dataset__pydantic(
     asset_name: str, gt_dataset_asset: str, pred_dataset_asset: str
 ):
+
     @dg.asset(
         name=asset_name,
         key_prefix=[AssetLayer.FCT, DataSource.HUGGINGFACE],
@@ -190,13 +186,7 @@ def asset_factory__gt_aligned_dataset__pydantic(
                 continue
 
             # Align the entries using the JSONAligner
-
-            aligner_class = ALIGNER_BACKENDS[config.backend]
-
-            aligner = aligner_class(
-                weights_mapping=config.weights, threshold=config.threshold
-            )
-
+            aligner = JSONAligner(weights_mapping=config.weights, threshold=config.threshold)
             aligned_gt_entries, aligned_pred_entries = aligner.align_entries(
                 {
                     "entries": [
@@ -207,7 +197,7 @@ def asset_factory__gt_aligned_dataset__pydantic(
                     "entries": [
                         entry.model_dump() for entry in parsed_item.predictions.entries
                     ]
-                },
+                }
             )
 
             # Convert aligned entries back to SchematismEntry objects
@@ -300,6 +290,7 @@ def pred__parsed_dataset__pydantic(
     context: AssetExecutionContext,
     dataset: BaseDataset[PredictionDataItem],
     parser: dg.ResourceParam[Parser],
+    config: ParsingConfig,
 ) -> BaseDataset[PredictionDataItem]:
     """Parse and normalize LLM predictions using the translation parser.
 

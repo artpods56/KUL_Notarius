@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from typing import final, override
+from typing import final, override, cast
 
 from pydantic import BaseModel
 from structlog import get_logger
@@ -14,17 +14,17 @@ from notarius.application.ports.outbound.cached_engine import (
     CacheKeyGenerator,
 )
 from notarius.infrastructure.cache.adapters.llm import LLMCache
-from notarius.infrastructure.llm.conversation import Conversation
 from notarius.infrastructure.llm.engine_adapter import (
     CompletionResult,
     CompletionRequest,
 )
+from notarius.shared.logger import Logger
 
-logger = get_logger(__name__)
+logger = cast(Logger,get_logger(__name__))
 
 
 @final
-class LLMCacheKeyGenerator(CacheKeyGenerator[CompletionRequest]):
+class LLMCacheKeyGenerator(CacheKeyGenerator[CompletionRequest[BaseModel]]):
     """Generate deterministic cache keys for LLM completion requests.
 
     Keys are based on:
@@ -33,7 +33,7 @@ class LLMCacheKeyGenerator(CacheKeyGenerator[CompletionRequest]):
     """
 
     @override
-    def generate_key(self, request: CompletionRequest) -> str:
+    def generate_key(self, request: CompletionRequest[BaseModel]) -> str:
         """Generate a unique cache key from the request.
 
         Args:
@@ -69,7 +69,7 @@ class LLMCacheBackend[T: BaseModel](CacheBackend[CompletionResult[T]]):
     - Structured output (Pydantic models)
     """
 
-    def __init__(self, cache: LLMCache, key_generator: LLMCacheKeyGenerator):
+    def __init__(self, cache: LLMCache[T], key_generator: LLMCacheKeyGenerator):
         """Initialize the cache backend.
 
         Args:
@@ -105,9 +105,9 @@ class LLMCacheBackend[T: BaseModel](CacheBackend[CompletionResult[T]]):
         return self.cache.set(key, value)
 
 
-def create_llm_cache_backend(
+def create_llm_cache_backend[T: BaseModel](
     model_name: str,
-) -> tuple[LLMCacheBackend[BaseModel], LLMCacheKeyGenerator]:
+) -> tuple[LLMCacheBackend[T], LLMCacheKeyGenerator]:
     """Create an LLM cache backend with key generator.
 
     This is a convenience factory for setting up LLM caching.
@@ -117,19 +117,9 @@ def create_llm_cache_backend(
 
     Returns:
         Tuple of (cache_backend, key_generator)
-
-    Example:
-        >>> backend, keygen = create_llm_cache_backend("gpt-4")
-        >>> # Use with CachedEngine
-        >>> cached_engine = CachedEngine(
-        ...     engine=llm_engine,
-        ...     cache_backend=backend,
-        ...     key_generator=keygen,
-        ...     enabled=True
-        ... )
     """
-    cache = LLMCache(model_name=model_name)
+    cache = LLMCache[T](model_name=model_name)
     key_generator = LLMCacheKeyGenerator()
-    backend = LLMCacheBackend[BaseModel](cache=cache, key_generator=key_generator)
+    backend = LLMCacheBackend[T](cache=cache, key_generator=key_generator)
 
     return backend, key_generator

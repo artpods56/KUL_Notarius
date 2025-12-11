@@ -1,9 +1,10 @@
 """Use case for predicting with LLM model."""
 
 from dataclasses import dataclass
-from typing import final, override
+from typing import final, override, cast
 
-from structlog import get_logger
+from openai.types.responses import Response
+from structlog import get_logger, BoundLogger
 
 from notarius.application.ports.outbound.cached_engine import CachedEngine
 from notarius.application.use_cases.base import BaseRequest, BaseResponse, BaseUseCase
@@ -23,7 +24,7 @@ from notarius.schemas.data.pipeline import (
 from notarius.orchestration.resources import ImageStorageResource
 from notarius.domain.entities.schematism import SchematismPage
 
-logger = get_logger(__name__)
+logger = cast(BoundLogger,get_logger(__name__))
 
 
 @dataclass
@@ -105,7 +106,8 @@ class PredictDatasetWithLLM(BaseUseCase[PredictWithLLMRequest, PredictWithLLMRes
         for lmv3_item, ocr_item in zip(
             request.lmv3_dataset.items, request.ocr_dataset.items
         ):
-            if lmv3_item.image_path is None and lmv3_item.text is None:
+
+            if not (image_path := lmv3_item.image_path or ocr_item.image_path):
                 logger.warning(
                     "Skipping item without image_path or text",
                     sample_id=lmv3_item.metadata,
@@ -128,10 +130,8 @@ class PredictDatasetWithLLM(BaseUseCase[PredictWithLLMRequest, PredictWithLLMRes
                 template_name=request.user_prompt, context=llm_context
             )
 
-            if not lmv3_item.image_path:
-                continue
 
-            image = self.image_storage.load_image(lmv3_item.image_path)
+            image = self.image_storage.load_image(image_path)
 
             # Build conversation
             system_message = construct_text_message(text=system_prompt, role="system")
@@ -146,15 +146,18 @@ class PredictDatasetWithLLM(BaseUseCase[PredictWithLLMRequest, PredictWithLLMRes
                 input=conversation,
                 structured_output=SchematismPage,
             )
-            response = self.llm_engine.process(llm_request)
+            result = self.llm_engine.process(llm_request)
 
-            # Create prediction item
-            produced_item = PredictionDataItem(
-                image_path=lmv3_item.image_path,
-                text=ocr_item.text,
-                metadata=lmv3_item.metadata,
-                predictions=response.output.response,
-            )
+            structured_response = result.output.structured_response
+            if isinstance(structured_response, SchematismPage):
+                produced_item = PredictionDataItem(
+                    image_path=lmv3_item.image_path,
+                    text=ocr_item.text,
+                    metadata=lmv3_item.metadata,
+                    predictions=structured_response
+                )
+            else:
+                raise ValueError(f"Unexpected structured response: {structured_response}")
 
             items.append(produced_item)
 

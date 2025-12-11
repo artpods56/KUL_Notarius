@@ -58,9 +58,9 @@ class OCREngine(ConfigurableEngine[PytesseractOCRConfig, OCRRequest, OCRResponse
         _engine = OCREngine.from_config(config)
 
         request = OCRRequest(input=pil_image)
-        response = _engine.process(request)
+        structured_response = _engine.process(request)
 
-        words, bboxes = response.output.words, response.output.bboxes
+        words, bboxes = structured_response.output.words, structured_response.output.bboxes
         ```
     """
 

@@ -245,8 +245,8 @@ class EnrichDatasetWithContextualLLM:
                 result = self.engine.process(completion_request)
 
                 # Extract structured prediction
-                if isinstance(result.output.response, SchematismPage):
-                    prediction = result.output.response
+                if isinstance(result.output.structured_response, SchematismPage):
+                    prediction = result.output.structured_response
                 else:
                     # Handle parsed output
                     import json
