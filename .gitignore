@@ -170,7 +170,7 @@ poetry.toml
 # ruff
 .ruff_cache/
 
-# LSP config files
+# LSP config_manager files
 pyrightconfig.json
 
 ### VisualStudioCode ###
@@ -204,11 +204,11 @@ pyrightconfig.json
 tmp/
 
 # --- services ---
-src/services/data/hf_dataset
-src/services/data/images
-src/services/data/ocr_cache
-src/services/postgres-data
-src/services/backends/layoutlmv3_backend/data/models/
+services/data/hf_dataset
+services/data/images
+services/data/ocr_cache
+services/postgres-data
+services/backends/layoutlmv3_backend/data/models/
 
 # --- vendor ---
 vendor
@@ -219,5 +219,5 @@ data/inputs/*
 data/outputs/*
 data/models/*
 
-# --- models folder ---
-models/
+# --- ml_models folder ---
+./models/
