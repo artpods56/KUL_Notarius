@@ -15,11 +15,11 @@ from notarius.orchestration.constants import (
     Kinds,
 )
 from notarius.orchestration.resources.base import (
-    ImageStorageResource,
     OCREngineResource,
     LMv3EngineResource,
     LLMEngineResource,
 )
+from notarius.orchestration.resources.storage import ImageRepositoryResource
 from notarius.schemas.data.pipeline import (
     BaseDataset,
     BaseDataItem,
@@ -59,7 +59,7 @@ class OcrConfig(dg.Config):
 async def pred__ocr_enriched_dataset__pydantic(
     context: AssetExecutionContext,
     dataset: BaseDataset[BaseDataItem],
-    image_storage: ImageStorageResource,
+    images_repository: ImageRepositoryResource,
     ocr_engine: OCREngineResource,
 ):
     ocr_model = ocr_engine.get_engine()
@@ -69,7 +69,7 @@ async def pred__ocr_enriched_dataset__pydantic(
     # Use new CachedEngine pattern
     use_case = EnrichDatasetWithOCR(
         ocr_engine=ocr_model,
-        image_storage=image_storage,
+        image_storage=images_repository,
         language=config.language,
         enable_cache=config.enable_cache,
     )
@@ -119,7 +119,7 @@ async def pred__lmv3_enriched_dataset__pydantic(
     context: AssetExecutionContext,
     dataset: BaseDataset[BaseDataItem],
     config: LMv3Config,
-    image_storage: ImageStorageResource,
+    images_repository: ImageRepositoryResource,
     lmv3_engine: LMv3EngineResource,
 ):
     # Get the actual engine instance from the resource
@@ -128,7 +128,7 @@ async def pred__lmv3_enriched_dataset__pydantic(
     # Use new CachedEngine pattern
     use_case = EnrichDatasetWithLMv3(
         lmv3_engine=lmv3_model,
-        image_storage=image_storage,
+        image_storage=images_repository,
         checkpoint=config.checkpoint,
         enable_cache=config.enable_cache,
     )
@@ -184,7 +184,7 @@ async def pred__llm_enriched_dataset__pydantic(
     lmv3_dataset: BaseDataset,  # pyright: ignore[reportMissingTypeArgument]
     ocr_dataset: BaseDataset[BaseDataItem],
     config: LLMConfig,
-    image_storage: ImageStorageResource,
+    images_repository: ImageRepositoryResource,
     llm_engine_resource: LLMEngineResource,
 ):
     """Generate LLM predictions for each item in the lmv3_dataset.
@@ -199,7 +199,7 @@ async def pred__llm_enriched_dataset__pydantic(
     # Use new CachedEngine pattern
     use_case = PredictDatasetWithLLM(
         llm_engine=llm_model,
-        image_storage=image_storage,
+        image_storage=images_repository,
         model_name=llm_model.used_model,
         enable_cache=config.enable_cache,
         use_lmv3_hints=config.use_lmv3_hints,
@@ -279,7 +279,7 @@ async def pred__llm_ocr_enriched_dataset__pydantic(
     context: AssetExecutionContext,
     dataset: BaseDataset[BaseDataItem],
     config: LLMOcrConfig,
-    image_storage: ImageStorageResource,
+    images_repository: ImageRepositoryResource,
     llm_engine_resource: LLMEngineResource,
 ):
     """Enrich dataset with OCR text using LLM vision capabilities.
@@ -297,7 +297,7 @@ async def pred__llm_ocr_enriched_dataset__pydantic(
 
     use_case = EnrichDatasetWithLLMOCR(
         llm_engine=llm_engine,
-        image_storage=image_storage,
+        image_storage=images_repository,
         model_name=llm_engine.used_model,
         enable_cache=config.enable_cache,
     )

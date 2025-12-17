@@ -24,8 +24,8 @@ from notarius.orchestration.constants import (
 from notarius.orchestration.resources.base import (
     ExcelWriterResource,
     WandBRunResource,
-    ImageStorageResource,
 )
+from notarius.orchestration.resources.storage import ImageRepositoryResource
 from notarius.schemas.data.pipeline import BaseDataset, BaseDataItem
 
 
@@ -172,7 +172,7 @@ async def eval__wandb_export_dataframe__pandas(
     pydantic_dataset: BaseDataset[BaseDataItem],
     config: WandBDataFrameExport,
     wandb_run: WandBRunResource,
-    image_storage: ImageStorageResource,
+    images_repository: ImageRepositoryResource,
 ):
     """Export parsed and source dataframes to Weights & Biases as tables."""
 
@@ -182,7 +182,7 @@ async def eval__wandb_export_dataframe__pandas(
         mapping = {}
         for item in dataset.items:
             if item.image_path:
-                mapping[item.metadata.sample_id] = image_storage.load_image(
+                mapping[item.metadata.sample_id] = images_repository.load_image(
                     item.image_path
                 )
         return mapping
