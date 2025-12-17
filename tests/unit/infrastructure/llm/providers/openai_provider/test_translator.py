@@ -5,11 +5,6 @@ native format using singledispatch pattern.
 """
 
 import pytest
-from openai.types.responses import (
-    ResponseInputTextParam,
-    ResponseInputImageParam,
-)
-from openai.types.responses.response_input_param import Message
 
 from notarius.domain.entities.messages import (
     TextContent,

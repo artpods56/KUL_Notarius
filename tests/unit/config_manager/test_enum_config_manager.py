@@ -79,10 +79,10 @@ class TestConfigSchemaRegistration:
 
     def test_base_dataset_configs_registered(self):
         """Test that data configs are registered."""
-        # Generation data config_manager (BaseDatasetConfig is registered with GENERATION)
+        # Default data config_manager (BaseDatasetConfig is registered with DEFAULT)
         from notarius.schemas.configs.dataset_config import BaseDatasetConfig
 
-        schema = get_config_schema(ConfigType.DATASET, DatasetConfigSubtype.GENERATION)
+        schema = get_config_schema(ConfigType.DATASET, DatasetConfigSubtype.DEFAULT)
         assert schema is not None
         assert schema.__name__ == BaseDatasetConfig.__name__
 
@@ -132,15 +132,15 @@ class TestConfigManagerWithEnums:
     def test_validate_config_with_valid_llm_config(self, config_manager):
         """Test validating a valid LLM config_manager."""
         valid_config_dict = {
-            "provider": {"backend": "openai", "template_dir": "prompts"},
-            "clients": {"openai": {"model": "gpt-3.5-turbo"}},
+            "backend": {"type": "openai"},
+            "clients": {"openai": {"backend": "openai", "model": "gpt-3.5-turbo"}},
         }
         validated = config_manager.validate_config(
             ConfigType.MODELS, ModelsConfigSubtype.LLM, valid_config_dict
         )
         assert validated is not None
         assert isinstance(validated, dict)
-        assert "provider" in validated
+        assert "backend" in validated
         assert "clients" in validated
 
     def test_validate_config_with_invalid_llm_config(self, config_manager):
@@ -184,7 +184,7 @@ class TestConfigManagerWithEnums:
     def test_generate_default_config_for_dataset(self, config_manager):
         """Test generating default config_manager for data."""
         config = config_manager.generate_default_config(
-            ConfigType.DATASET, DatasetConfigSubtype.GENERATION, save=False
+            ConfigType.DATASET, DatasetConfigSubtype.DEFAULT, save=False
         )
         assert isinstance(config, DictConfig)
         assert "path" in config

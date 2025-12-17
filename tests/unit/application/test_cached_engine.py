@@ -2,7 +2,7 @@
 
 from typing import final, override
 import pytest
-from unittest.mock import Mock, MagicMock
+from unittest.mock import Mock
 from dataclasses import dataclass
 
 from notarius.application.ports.outbound.cached_engine import (
@@ -25,7 +25,7 @@ class TestRequest(BaseRequest[str]):
 
 @dataclass(frozen=True)
 class TestResponse(BaseResponse[str]):
-    """Test response type."""
+    """Test structured_response type."""
 
     pass
 
@@ -41,6 +41,7 @@ class TestEngine(ConfigurableEngine[TestConfig, TestRequest, TestResponse]):
     """Test engine implementation."""
 
     def __init__(self, config: TestConfig):
+        self._init_stats()
         self.config = config
         self.process_count = 0
 
@@ -83,7 +84,7 @@ class TestCachedEngine:
     """Test suite for CachedEngine."""
 
     def test_cache_miss_processes_request(self):
-        """Test that cache miss results in processing the request."""
+        """Test that cache miss sample in processing the request."""
         # Setup
         base_engine = TestEngine(TestConfig(value="test"))
         cache_backend = TestCacheBackend()
@@ -108,7 +109,7 @@ class TestCachedEngine:
         assert cached_engine.stats["hits"] == 0
 
     def test_cache_hit_skips_processing(self):
-        """Test that cache hit returns cached response without processing."""
+        """Test that cache hit returns cached structured_response without processing."""
         # Setup
         base_engine = TestEngine(TestConfig(value="test"))
         cache_backend = TestCacheBackend()
@@ -212,7 +213,7 @@ class TestCachedEngine:
         cached_engine.clear_stats()
 
         # Verify
-        assert cached_engine.stats == {"hits": 0, "misses": 0, "errors": 0}
+        assert cached_engine.stats == {"calls": 0, "hits": 0, "misses": 0, "errors": 0}
 
     def test_wrapped_engine_access(self):
         """Test that wrapped_engine property provides access to base engine."""

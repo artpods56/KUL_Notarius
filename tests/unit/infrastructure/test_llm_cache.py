@@ -3,7 +3,7 @@
 import pickle
 from dataclasses import dataclass
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 from pydantic import BaseModel
@@ -28,12 +28,14 @@ class SampleSchema(BaseModel):
 
 @dataclass(frozen=True)
 class MockProviderResponse(BaseProviderResponse[SampleSchema]):
-    """Mock provider response for testing."""
-
-    response: SampleSchema
+    """Mock provider structured_response for testing."""
 
     def to_string(self) -> str:
-        return self.response.model_dump_json()
+        return (
+            self.structured_response.model_dump_json()
+            if self.structured_response
+            else ""
+        )
 
 
 @pytest.fixture
@@ -52,19 +54,23 @@ def llm_cache(tmp_cache_dir: Path) -> LLMCache:
 def sample_conversation() -> Conversation:
     """Create a sample conversation."""
     messages = [
-        ChatMessage(role="system", content=[TextContent(text="You are a helpful assistant.")]),
+        ChatMessage(
+            role="system", content=[TextContent(text="You are a helpful assistant.")]
+        ),
         ChatMessage(role="user", content=[TextContent(text="What is 2+2?")]),
     ]
     return Conversation.from_messages(messages)
 
 
 @pytest.fixture
-def sample_completion_result(sample_conversation: Conversation) -> CompletionResult[SampleSchema]:
+def sample_completion_result(
+    sample_conversation: Conversation,
+) -> CompletionResult[SampleSchema]:
     """Create a sample CompletionResult with structured output."""
     schema = SampleSchema(name="John Doe", age=30, email="john@example.com")
-    response = MockProviderResponse(response=schema)
+    response = MockProviderResponse(structured_response=schema, text_response=None)
 
-    # Add assistant response to conversation
+    # Add assistant structured_response to conversation
     updated_conversation = sample_conversation.add(
         ChatMessage(role="assistant", content=[TextContent(text=response.to_string())])
     )
@@ -77,19 +83,20 @@ def sample_completion_result(sample_conversation: Conversation) -> CompletionRes
 
 @dataclass(frozen=True)
 class TextOnlyResponse(BaseProviderResponse[None]):
-    """Mock text-only response (no structured output)."""
-
-    response: None
-    text: str
+    """Mock text-only structured_response (no structured output)."""
 
     def to_string(self) -> str:
-        return self.text
+        return self.text_response or ""
 
 
 @pytest.fixture
-def text_only_completion_result(sample_conversation: Conversation) -> CompletionResult[BaseModel]:
+def text_only_completion_result(
+    sample_conversation: Conversation,
+) -> CompletionResult[BaseModel]:
     """Create a CompletionResult with text-only output (no structured schema)."""
-    response = TextOnlyResponse(response=None, text="The answer is 4")
+    response = TextOnlyResponse(
+        structured_response=None, text_response="The answer is 4"
+    )
     updated_conversation = sample_conversation.add(
         ChatMessage(role="assistant", content=[TextContent(text=response.to_string())])
     )
@@ -160,7 +167,10 @@ class TestLLMCacheSetAndGet:
         assert cached_result is not None
 
         # Verify the data is intact
-        assert cached_result.text == sample_completion_result.text
+        assert (
+            cached_result.output.to_string()
+            == sample_completion_result.output.to_string()
+        )
         assert len(cached_result.conversation.messages) == len(
             sample_completion_result.conversation.messages
         )
@@ -183,9 +193,9 @@ class TestLLMCacheSetAndGet:
         initial = llm_cache.get(key)
 
         # Create a modified result
-        new_conversation = Conversation.from_messages([
-            ChatMessage(role="user", content=[TextContent(text="Different message")])
-        ])
+        new_conversation = Conversation.from_messages(
+            [ChatMessage(role="user", content=[TextContent(text="Different message")])]
+        )
         new_result = CompletionResult[SampleSchema](
             output=sample_completion_result.output,
             conversation=new_conversation,
@@ -229,8 +239,8 @@ class TestLLMCacheStructuredOutput:
 
         assert cached is not None
         # Verify the structured data
-        original_output = sample_completion_result.output.response
-        cached_output = cached.output.response
+        original_output = sample_completion_result.output.structured_response
+        cached_output = cached.output.structured_response
 
         assert cached_output.name == original_output.name
         assert cached_output.age == original_output.age
@@ -241,14 +251,14 @@ class TestLLMCacheStructuredOutput:
         llm_cache: LLMCache,
         text_only_completion_result: CompletionResult[BaseModel],
     ) -> None:
-        """Test caching results without structured output."""
+        """Test caching sample without structured output."""
         key = "text_only_test"
 
         llm_cache.set(key, text_only_completion_result)
         cached = llm_cache.get(key)
 
         assert cached is not None
-        assert cached.text == "The answer is 4"
+        assert cached.output.text_response == "The answer is 4"
 
 
 class TestLLMCacheConversation:
@@ -291,14 +301,16 @@ class TestLLMCacheConversation:
                 role="user",
                 content=[
                     TextContent(text="What's in this image?"),
-                    ImageContent(image_url="data:image/png;base64,iVBORw0KG...", detail="high"),
+                    ImageContent(
+                        image_url="data:image/png;base64,iVBORw0KG...", detail="high"
+                    ),
                 ],
             )
         ]
         conversation = Conversation.from_messages(messages)
 
         schema = SampleSchema(name="Test", age=25)
-        response = MockProviderResponse(response=schema)
+        response = MockProviderResponse(structured_response=schema, text_response=None)
         result = CompletionResult[SampleSchema](
             output=response,
             conversation=conversation,
@@ -333,7 +345,7 @@ class TestLLMCachePersistence:
         cached = cache2.get(key)
 
         assert cached is not None
-        assert cached.text == sample_completion_result.text
+        assert cached.output.to_string() == sample_completion_result.output.to_string()
 
     def test_different_models_use_separate_caches(
         self,
@@ -367,7 +379,9 @@ class TestLLMCacheErrorHandling:
         # Create an unpicklable object
         unpicklable = lambda x: x  # Functions defined in local scope can't be pickled
 
-        with patch.object(llm_cache.cache, "set", side_effect=pickle.PickleError("Mock error")):
+        with patch.object(
+            llm_cache.cache, "set", side_effect=pickle.PickleError("Mock error")
+        ):
             result = llm_cache.set("test_key", unpicklable)
             assert result is False
 
@@ -442,11 +456,15 @@ class TestLLMCacheRealWorldScenarios:
         # Build a multi-turn conversation
         conv = Conversation()
         conv = conv.add(ChatMessage(role="user", content=[TextContent(text="Hello")]))
-        conv = conv.add(ChatMessage(role="assistant", content=[TextContent(text="Hi!")]))
-        conv = conv.add(ChatMessage(role="user", content=[TextContent(text="How are you?")]))
+        conv = conv.add(
+            ChatMessage(role="assistant", content=[TextContent(text="Hi!")])
+        )
+        conv = conv.add(
+            ChatMessage(role="user", content=[TextContent(text="How are you?")])
+        )
 
         schema = SampleSchema(name="Assistant", age=1)
-        response = MockProviderResponse(response=schema)
+        response = MockProviderResponse(structured_response=schema, text_response=None)
         result = CompletionResult[SampleSchema](output=response, conversation=conv)
 
         key = "multi_turn_test"
@@ -468,11 +486,13 @@ class TestLLMCacheRealWorldScenarios:
                 ChatMessage(role="user", content=[TextContent(text=f"Message {i}")])
             )
             conv = conv.add(
-                ChatMessage(role="assistant", content=[TextContent(text=f"Response {i}")])
+                ChatMessage(
+                    role="assistant", content=[TextContent(text=f"Response {i}")]
+                )
             )
 
         schema = SampleSchema(name="Test", age=1)
-        response = MockProviderResponse(response=schema)
+        response = MockProviderResponse(structured_response=schema, text_response=None)
         result = CompletionResult[SampleSchema](output=response, conversation=conv)
 
         key = "large_conv_test"

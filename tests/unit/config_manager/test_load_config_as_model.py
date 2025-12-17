@@ -6,7 +6,6 @@ from notarius.infrastructure.config.constants import (
     ModelsConfigSubtype,
     DatasetConfigSubtype,
 )
-from notarius.infrastructure.config.manager import get_config_manager
 
 
 class TestLoadConfigAsModel:
@@ -41,7 +40,7 @@ class TestLoadConfigAsModel:
     def test_load_dataset_config_as_model(self, config_manager):
         """Load dataset config as Pydantic model instance."""
         dataset_config = config_manager.load_config_as_model(
-            config_name="schematism_dataset_config",
+            config_name="default",
             config_type=ConfigType.DATASET,
             config_subtype=DatasetConfigSubtype.EVALUATION,
         )
@@ -79,9 +78,7 @@ class TestLoadConfigAsModel:
         from notarius.infrastructure.config.registry import get_config_schema
 
         # Get the expected schema class
-        expected_schema = get_config_schema(
-            ConfigType.MODELS, ModelsConfigSubtype.LMV3
-        )
+        expected_schema = get_config_schema(ConfigType.MODELS, ModelsConfigSubtype.LMV3)
 
         # Load the config as model
         lmv3_config = config_manager.load_config_as_model(
@@ -110,7 +107,7 @@ class TestLoadConfigAsModel:
         assert len(config_dict) > 0
 
     def test_comparison_with_load_config(self, config_manager):
-        """Compare load_config_as_model with load_config results."""
+        """Compare load_config_as_model with load_config sample."""
         from omegaconf import DictConfig
 
         # Load as model

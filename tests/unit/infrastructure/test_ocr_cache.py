@@ -36,14 +36,14 @@ def sample_image() -> Image.Image:
 
 @pytest.fixture
 def simple_ocr_response() -> OCRResponse:
-    """Create a simple OCR response (text only)."""
+    """Create a simple OCR structured_response (text only)."""
     result = SimpleOCRResult(text="Hello World")
     return OCRResponse(output=result)
 
 
 @pytest.fixture
 def structured_ocr_response() -> OCRResponse:
-    """Create a structured OCR response with words and bboxes."""
+    """Create a structured OCR structured_response with words and bboxes."""
     words = ["Hello", "World", "Test"]
     bboxes: list[BBox] = [
         (100, 200, 300, 250),
@@ -84,9 +84,7 @@ class TestOCRCacheInitialization:
         """Test that cache_type returns correct value."""
         assert ocr_cache.cache_type == "PyTesseractCache"
 
-    def test_different_languages_use_separate_caches(
-        self, tmp_cache_dir: Path
-    ) -> None:
+    def test_different_languages_use_separate_caches(self, tmp_cache_dir: Path) -> None:
         """Test that different languages create separate cache directories."""
         cache_eng = PyTesseractCache(language="eng", caches_dir=tmp_cache_dir)
         cache_fra = PyTesseractCache(language="fra", caches_dir=tmp_cache_dir)
@@ -107,7 +105,7 @@ class TestOCRCacheSetAndGet:
         ocr_cache: PyTesseractCache,
         simple_ocr_response: OCRResponse,
     ) -> None:
-        """Test caching and retrieving a simple OCR response (text only)."""
+        """Test caching and retrieving a simple OCR structured_response (text only)."""
         key = "test_key_1"
 
         # Cache the result
@@ -125,7 +123,7 @@ class TestOCRCacheSetAndGet:
         ocr_cache: PyTesseractCache,
         structured_ocr_response: OCRResponse,
     ) -> None:
-        """Test caching and retrieving a structured OCR response."""
+        """Test caching and retrieving a structured OCR structured_response."""
         key = "test_key_2"
 
         # Cache the result
@@ -352,7 +350,7 @@ class TestOCRCacheRealWorldScenarios:
         self,
         tmp_cache_dir: Path,
     ) -> None:
-        """Test caching OCR results from different languages."""
+        """Test caching OCR sample from different languages."""
         # English cache
         cache_eng = PyTesseractCache(language="eng", caches_dir=tmp_cache_dir)
         eng_result = SimpleOCRResult(text="Hello World")
@@ -376,7 +374,7 @@ class TestOCRCacheRealWorldScenarios:
         self,
         ocr_cache: PyTesseractCache,
     ) -> None:
-        """Test caching OCR results with normalized bounding boxes (0-1000 range)."""
+        """Test caching OCR sample with normalized bounding boxes (0-1000 range)."""
         words = ["Test"]
         bboxes: list[BBox] = [(100, 200, 300, 400)]  # Normalized coordinates
         result = StructuredOCRResult(words=words, bboxes=bboxes)
@@ -396,10 +394,10 @@ class TestOCRCacheRealWorldScenarios:
         structured_ocr_response: OCRResponse,
     ) -> None:
         """Test caching both simple and structured responses in same cache."""
-        # Cache simple response
+        # Cache simple structured_response
         ocr_cache.set("simple", simple_ocr_response)
 
-        # Cache structured response
+        # Cache structured structured_response
         ocr_cache.set("structured", structured_ocr_response)
 
         # Retrieve both

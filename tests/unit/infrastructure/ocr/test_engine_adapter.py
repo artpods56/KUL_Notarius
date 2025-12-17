@@ -1,6 +1,5 @@
 """Tests for OCREngine adapter."""
 
-from typing import Any
 from unittest.mock import MagicMock, patch
 
 import numpy as np
@@ -11,7 +10,6 @@ from PIL.Image import Image as PILImage
 from notarius.infrastructure.ocr.engine_adapter import OCREngine
 from notarius.infrastructure.ocr.types import PytesseractOCRResultDict
 from notarius.schemas.configs import PytesseractOCRConfig
-from notarius.schemas.data.structs import BBox
 
 
 @pytest.fixture
@@ -50,22 +48,21 @@ class TestOcrEngine:
     @pytest.fixture
     def engine(self, ocr_config: PytesseractOCRConfig) -> OCREngine:
         """Create an _engine instance for testing."""
-        return OCREngine(config=ocr_config, enable_cache=False)
+        return OCREngine(config=ocr_config)
 
     def test_init(self, ocr_config: PytesseractOCRConfig) -> None:
         """Test _engine initialization."""
-        engine = OCREngine(config=ocr_config, enable_cache=False)
+        engine = OCREngine(config=ocr_config)
 
         assert engine.config is ocr_config
         assert engine.config.language == "eng"
         assert engine.config.tesseract_config == "--psm 6 --oem 3"
 
-    def test_init_with_cache_enabled(self, ocr_config: PytesseractOCRConfig) -> None:
-        """Test _engine initialization with caching enabled."""
-        engine = OCREngine(config=ocr_config, enable_cache=True)
+    def test_init_with_different_config(self, ocr_config: PytesseractOCRConfig) -> None:
+        """Test _engine initialization with different config."""
+        engine = OCREngine(config=ocr_config)
 
         assert engine.config is ocr_config
-        # Cache flag is stored but not used in current implementation
 
     def test_from_config(self, ocr_config: PytesseractOCRConfig) -> None:
         """Test creating _engine from provider_config using class method."""

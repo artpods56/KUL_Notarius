@@ -5,7 +5,11 @@ from pathlib import Path
 from typing import Callable
 
 import pytest
-from dagster import AssetKey, DagsterInstance, InputContext, OutputContext, build_input_context, build_output_context
+from dagster import (
+    AssetKey,
+    build_input_context,
+    build_output_context,
+)
 
 from notarius.orchestration.dill_io_manager import DillIOManager, dill_io_manager
 

@@ -24,21 +24,23 @@ from notarius.infrastructure.llm.engine_adapter import (
 # Test fixtures
 
 
-class TestSchema(BaseModel):
-    """Test Pydantic schema."""
+class SampleSchema(BaseModel):
+    """Sample Pydantic schema for testing."""
 
     name: str
     value: int
 
 
 @dataclass(frozen=True)
-class MockProviderResponse(BaseProviderResponse[TestSchema]):
-    """Mock provider response."""
-
-    response: TestSchema
+class MockProviderResponse(BaseProviderResponse[SampleSchema]):
+    """Mock provider structured_response."""
 
     def to_string(self) -> str:
-        return self.response.model_dump_json()
+        return (
+            self.structured_response.model_dump_json()
+            if self.structured_response
+            else ""
+        )
 
 
 @pytest.fixture
@@ -78,26 +80,28 @@ def sample_conversation() -> Conversation:
 
 
 @pytest.fixture
-def sample_request(sample_conversation: Conversation) -> CompletionRequest[TestSchema]:
+def sample_request(
+    sample_conversation: Conversation,
+) -> CompletionRequest[SampleSchema]:
     """Create a sample completion request."""
-    return CompletionRequest[TestSchema](
+    return CompletionRequest[SampleSchema](
         input=sample_conversation,
-        structured_output=TestSchema,
+        structured_output=SampleSchema,
     )
 
 
 @pytest.fixture
-def sample_result(sample_conversation: Conversation) -> CompletionResult[TestSchema]:
+def sample_result(sample_conversation: Conversation) -> CompletionResult[SampleSchema]:
     """Create a sample completion result."""
-    schema = TestSchema(name="test", value=42)
-    response = MockProviderResponse(response=schema)
+    schema = SampleSchema(name="test", value=42)
+    response = MockProviderResponse(structured_response=schema, text_response=None)
 
-    # Add assistant response
+    # Add assistant structured_response
     conv = sample_conversation.add(
         ChatMessage(role="assistant", content=[TextContent(text=response.to_string())])
     )
 
-    return CompletionResult[TestSchema](output=response, conversation=conv)
+    return CompletionResult[SampleSchema](output=response, conversation=conv)
 
 
 # Test cases
@@ -134,12 +138,12 @@ class TestLLMCacheKeyGenerator:
         key_generator: LLMCacheKeyGenerator,
     ) -> None:
         """Test that different messages generate different keys."""
-        conv1 = Conversation.from_messages([
-            ChatMessage(role="user", content=[TextContent(text="Hello")])
-        ])
-        conv2 = Conversation.from_messages([
-            ChatMessage(role="user", content=[TextContent(text="Goodbye")])
-        ])
+        conv1 = Conversation.from_messages(
+            [ChatMessage(role="user", content=[TextContent(text="Hello")])]
+        )
+        conv2 = Conversation.from_messages(
+            [ChatMessage(role="user", content=[TextContent(text="Goodbye")])]
+        )
 
         req1 = CompletionRequest(input=conv1, structured_output=None)
         req2 = CompletionRequest(input=conv2, structured_output=None)
@@ -155,9 +159,11 @@ class TestLLMCacheKeyGenerator:
         sample_conversation: Conversation,
     ) -> None:
         """Test that structured output flag affects the key."""
-        req_without = CompletionRequest(input=sample_conversation, structured_output=None)
+        req_without = CompletionRequest(
+            input=sample_conversation, structured_output=None
+        )
         req_with = CompletionRequest(
-            input=sample_conversation, structured_output=TestSchema
+            input=sample_conversation, structured_output=SampleSchema
         )
 
         key_without = key_generator.generate_key(req_without)
@@ -212,8 +218,8 @@ class TestLLMCacheBackend:
         cached = cache_backend.get(key)
         assert cached is not None
         assert len(cached.conversation.messages) == 3
-        assert cached.output.response.name == "test"
-        assert cached.output.response.value == 42
+        assert cached.output.structured_response.name == "test"
+        assert cached.output.structured_response.value == 42
 
     def test_cache_preserves_conversation(
         self,
@@ -247,9 +253,9 @@ class TestLLMCacheBackend:
         cached = cache_backend.get(key)
 
         assert cached is not None
-        assert isinstance(cached.output.response, TestSchema)
-        assert cached.output.response.name == "test"
-        assert cached.output.response.value == 42
+        assert isinstance(cached.output.structured_response, SampleSchema)
+        assert cached.output.structured_response.name == "test"
+        assert cached.output.structured_response.value == 42
 
     def test_overwrite_existing_entry(
         self,
@@ -263,9 +269,11 @@ class TestLLMCacheBackend:
         cache_backend.set(key, sample_result)
 
         # Second entry with different data
-        new_schema = TestSchema(name="updated", value=99)
-        new_response = MockProviderResponse(response=new_schema)
-        new_result = CompletionResult[TestSchema](
+        new_schema = SampleSchema(name="updated", value=99)
+        new_response = MockProviderResponse(
+            structured_response=new_schema, text_response=None
+        )
+        new_result = CompletionResult[SampleSchema](
             output=new_response,
             conversation=sample_result.conversation,
         )
@@ -274,8 +282,8 @@ class TestLLMCacheBackend:
         cached = cache_backend.get(key)
 
         assert cached is not None
-        assert cached.output.response.name == "updated"
-        assert cached.output.response.value == 99
+        assert cached.output.structured_response.name == "updated"
+        assert cached.output.structured_response.value == 99
 
 
 class TestLLMCacheBackendIntegration:
@@ -299,7 +307,7 @@ class TestLLMCacheBackendIntegration:
         cached = cache_backend.get(key)
 
         assert cached is not None
-        assert cached.output.response.name == "test"
+        assert cached.output.structured_response.name == "test"
 
     def test_same_request_retrieves_same_result(
         self,
@@ -346,7 +354,7 @@ class TestCreateLLMCacheBackend:
         cached = backend.get(key)
 
         assert cached is not None
-        assert cached.output.response.name == "test"
+        assert cached.output.structured_response.name == "test"
 
     def test_different_model_names_create_separate_caches(
         self,

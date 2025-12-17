@@ -79,7 +79,7 @@ class TestOcrEngineProcessMethod:
         request = OCRRequest(input=sample_image, mode="text")
         response = engine.process(request)
 
-        # Verify response structure
+        # Verify structured_response structure
         assert isinstance(response, OCRResponse)
         assert isinstance(response.output, SimpleOCRResult)
         assert response.output.text == "Extracted text content"
@@ -101,7 +101,7 @@ class TestOcrEngineProcessMethod:
         request = OCRRequest(input=sample_image, mode="structured")
         response = engine.process(request)
 
-        # Verify response structure
+        # Verify structured_response structure
         assert isinstance(response, OCRResponse)
         assert isinstance(response.output, StructuredOCRResult)
 

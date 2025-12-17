@@ -120,9 +120,7 @@ class TestLMv3CacheSetAndGet:
         assert cached_result.output.page_number == "42"
         assert len(cached_result.output.entries) == 2
 
-    def test_get_nonexistent_key_returns_none(
-        self, lmv3_cache: LMv3Cache
-    ) -> None:
+    def test_get_nonexistent_key_returns_none(self, lmv3_cache: LMv3Cache) -> None:
         """Test that getting a nonexistent key returns None."""
         result = lmv3_cache.get("nonexistent_key")
         assert result is None
@@ -414,4 +412,7 @@ class TestLMv3CacheRealWorldScenarios:
 
         assert cached is not None
         assert cached.output.entries[0].parish == "Parafia św. Wojciecha"
-        assert cached.output.entries[1].dedication == "John the Baptist and John the Evangelist"
+        assert (
+            cached.output.entries[1].dedication
+            == "John the Baptist and John the Evangelist"
+        )

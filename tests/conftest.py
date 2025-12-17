@@ -12,8 +12,6 @@ from notarius.infrastructure.config.constants import (
 from notarius.infrastructure.config.manager import ConfigType
 from notarius.domain.entities.schematism import SchematismPage
 
-import notarius.schemas.configs  # type: ignore
-from tests.unit.config_manager.conftest import config_manager
 
 
 @pytest.fixture(scope="session", autouse=True)
