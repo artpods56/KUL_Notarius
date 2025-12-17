@@ -1,12 +1,9 @@
-from typing import cast
-
 from notarius.infrastructure.config.constants import (
-    ConfigSubTypes,
     ConfigType,
     DatasetConfigSubtype,
 )
-from notarius.orchestration.assets.extract.ingest import AssetBaseDatasetConfig
 from notarius.infrastructure.config.manager import config_manager
+from notarius.orchestration.assets.transform.transform import GroundTruthDatasetConfig
 from notarius.orchestration.constants import DataSource, AssetLayer
 from notarius.orchestration.utils import AssetKeyHelper
 
@@ -25,4 +22,17 @@ RAW_HF_DATASET_OP_CONFIG = {
             config_subtype=DatasetConfigSubtype.DEFAULT,
         ).model_dump()
     }
+}
+
+GT_SOURCE_DATASET_PYDANTIC_OP_CONFIG = {
+    AssetKeyHelper.build_prefixed_key(
+        AssetLayer.INT, DataSource.HUGGINGFACE, "gt", "source_dataset", "pydantic"
+    ): {"config": GroundTruthDatasetConfig(ground_truth_source="source").model_dump()}
+}
+
+
+GT_PARSED_DATASET_PYDANTIC_OP_CONFIG = {
+    AssetKeyHelper.build_prefixed_key(
+        AssetLayer.INT, DataSource.HUGGINGFACE, "gt", "parsed_dataset", "pydantic"
+    ): {"config": GroundTruthDatasetConfig(ground_truth_source="parsed").model_dump()}
 }

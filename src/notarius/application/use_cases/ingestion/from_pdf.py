@@ -1,0 +1,83 @@
+import io
+from pathlib import Path
+from typing import final, cast, override
+from dataclasses import dataclass, field
+
+import pdfplumber
+from PIL import Image
+
+from notarius.application import ports
+from notarius.application.use_cases.base import BaseRequest, BaseResponse, BaseUseCase
+from notarius.schemas.data.pipeline import (
+    BaseDataItem,
+    BaseItemDataset,
+    BaseMetaData,
+)
+
+
+@dataclass
+class IngestPDFRequest(BaseRequest):
+    source_dir: str | None = None
+    pdf_paths: list[str] = field(default_factory=list)
+    glob_pattern: str = "*.pdf"
+
+    def __post_init__(self) -> None:
+        if not self.source_dir and not self.pdf_paths:
+            raise ValueError("Either 'source_dir' or 'pdf_paths' must be provided")
+
+    def get_pdf_paths(self) -> set[Path]:
+        pdf_paths = set(map(Path, self.pdf_paths))
+        if self.source_dir:
+            pdf_paths.update(sorted(Path(self.source_dir).glob(self.glob_pattern)))
+        return pdf_paths
+
+
+@dataclass
+class IngestPDFResponse(BaseResponse):
+    dataset: BaseItemDataset
+
+
+@final
+class IngestPDFUseCase(BaseUseCase[IngestPDFRequest, IngestPDFResponse]):
+    def __init__(
+        self,
+        storage: ports.FileStorage,
+        image_repository: ports.AbstractFileRepository[Image.Image],
+    ):
+        self.storage = storage
+        self.image_repository = image_repository
+
+    def _ingest_pdf(self, pdf_path: Path) -> list[BaseDataItem]:
+        items: list[BaseDataItem] = []
+
+        with self.storage.load(pdf_path) as pdf_stream:
+            with pdfplumber.open(cast(io.BytesIO, pdf_stream)) as pdf:
+                for i, page in enumerate(pdf.pages):
+                    text = page.extract_text()
+                    image = page.to_image().original
+
+                    image_path = self.image_repository.add(image, pdf_path.name)
+
+                    items.append(
+                        BaseDataItem(
+                            image_path=str(image_path),
+                            text=text,
+                            metadata=BaseMetaData(
+                                sample_id=i,
+                                filename=f"{pdf_path.name}_{i}",
+                                schematism_name=pdf_path.name,
+                            ),
+                        )
+                    )
+
+        return items
+
+    @override
+    def execute(self, request: IngestPDFRequest) -> IngestPDFResponse:
+
+        all_items: list[BaseDataItem] = []
+        for pdf_path in request.get_pdf_paths():
+            items = self._ingest_pdf(pdf_path)
+            all_items.extend(items)
+
+        return IngestPDFResponse(dataset=BaseItemDataset(items=all_items))

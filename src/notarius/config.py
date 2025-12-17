@@ -5,8 +5,13 @@ from pydantic_settings import SettingsConfigDict, BaseSettings
 
 from notarius.shared.constants import REPOSITORY_ROOT
 
+class StorageConfig(BaseSettings):
+    model_config = SettingsConfigDict(env_file=REPOSITORY_ROOT / ".env", extra="allow")
+    storage_root: Path
 
-class AppConfig(BaseSettings):
+
+
+class AppConfig(StorageConfig):
     model_config = SettingsConfigDict(env_file=REPOSITORY_ROOT / ".env", extra="allow")
 
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]

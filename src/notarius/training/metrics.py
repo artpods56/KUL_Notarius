@@ -1,6 +1,5 @@
 import numpy as np
 import evaluate
-from transformers.models.tapas.modeling_tf_tapas import n
 
 metric = evaluate.load("seqeval")
 

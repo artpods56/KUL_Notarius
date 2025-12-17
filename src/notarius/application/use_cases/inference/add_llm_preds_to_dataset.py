@@ -1,13 +1,14 @@
 """Use case for predicting with LLM model."""
 
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import final, override, cast
+from typing import final, override, Callable, Any
 
-from openai.types.responses import Response
-from structlog import get_logger, BoundLogger
 
 from notarius.application.ports.outbound.cached_engine import CachedEngine
+from notarius.application.ports.outbound.engine import CachedEngineStats, EngineStats
 from notarius.application.use_cases.base import BaseRequest, BaseResponse, BaseUseCase
+from notarius.domain.entities.messages import strip_images_from_message
 from notarius.infrastructure.cache.backends.llm import create_llm_cache_backend
 from notarius.infrastructure.llm.conversation import Conversation
 from notarius.infrastructure.llm.engine_adapter import LLMEngine, CompletionRequest
@@ -20,11 +21,13 @@ from notarius.schemas.data.pipeline import (
     BaseDataset,
     BaseDataItem,
     PredictionDataItem,
+    PredictionDataset,
 )
-from notarius.orchestration.resources import ImageStorageResource
-from notarius.domain.entities.schematism import SchematismPage
+from notarius.orchestration.resources.base import ImageStorageResource
+from notarius.domain.entities.schematism import PageContext, SchematismPage
+from notarius.shared.logger import get_logger
 
-logger = cast(BoundLogger,get_logger(__name__))
+logger = get_logger(__name__)
 
 
 @dataclass
@@ -35,7 +38,8 @@ class PredictWithLLMRequest(BaseRequest):
     ocr_dataset: BaseDataset[BaseDataItem]
     system_prompt: str = "system.j2"
     user_prompt: str = "user.j2"
-    use_lmv3_hints: bool = True
+
+    group_by_schematism_name: bool = True  # Group processing by schematism
 
 
 @dataclass
@@ -43,9 +47,7 @@ class PredictWithLLMResponse(BaseResponse):
     """Response containing LLM predictions."""
 
     dataset: BaseDataset[PredictionDataItem]
-    llm_executions: int
-    cache_hits: int
-    success_rate: float
+    execution_stats: CachedEngineStats | EngineStats
 
 
 @final
@@ -65,6 +67,8 @@ class PredictDatasetWithLLM(BaseUseCase[PredictWithLLMRequest, PredictWithLLMRes
         model_name: str,
         prompt_renderer: Jinja2PromptRenderer | None = None,
         enable_cache: bool = True,
+        use_lmv3_hints: bool = True,
+        accumulate_context: bool = False,
     ):
         """Initialize the use case.
 
@@ -77,6 +81,8 @@ class PredictDatasetWithLLM(BaseUseCase[PredictWithLLMRequest, PredictWithLLMRes
         """
         self.image_storage = image_storage
         self.prompt_renderer = prompt_renderer or Jinja2PromptRenderer()
+        self.use_lmv3_hints = use_lmv3_hints
+        self.accumulate_context = accumulate_context
 
         # Wrap engine with caching
         if enable_cache:
@@ -90,6 +96,122 @@ class PredictDatasetWithLLM(BaseUseCase[PredictWithLLMRequest, PredictWithLLMRes
         else:
             self.llm_engine = llm_engine
 
+    def _prepare_context(
+        self,
+        item: PredictionDataItem,
+        next_item: PredictionDataItem | None,
+        previous_context: PageContext | None,
+    ) -> dict[str, Any]:
+        return {
+            "ocr_text": item.text,
+            "next_page_ocr_text": next_item.text if next_item else None,
+            "hints": (
+                item.predictions.model_dump()
+                if item.predictions and self.use_lmv3_hints
+                else {}
+            ),
+            "previous_context": (
+                previous_context.model_dump() if previous_context else {}
+            ),
+        }
+
+    def _process_dataset_items(
+        self,
+        items: Sequence[PredictionDataItem],
+        system_prompt: str,
+        user_prompt: str,
+        schematism_name: str = "unknown",
+    ) -> Sequence[PredictionDataItem]:
+        rendered_system_prompt = self.prompt_renderer.render_prompt(
+            template_name=system_prompt, context={}
+        )
+        system_message = construct_text_message(
+            text=rendered_system_prompt, role="system"
+        )
+
+        conversation = Conversation().add(system_message)
+        previous_context: PageContext | None = None
+        for i, item in enumerate(items):
+            next_item = items[i + 1] if i + 1 < len(items) else None
+            if not item.image_path:
+                logger.debug(
+                    "Skipping sample",
+                    sample_index=i,
+                    items_num=len(items),
+                    schematism_name=schematism_name,
+                )
+                continue
+
+            logger.info(
+                "Processing sample",
+                sample_index=i,
+                items_num=len(items),
+                schematism_name=schematism_name,
+            )
+
+            llm_context = self._prepare_context(item, next_item, previous_context)
+
+            try:
+                image = self.image_storage.load_image(item.image_path).convert("RGB")
+
+                rendered_user_prompt = self.prompt_renderer.render_prompt(
+                    template_name=user_prompt, context=llm_context
+                )
+
+                user_message = construct_image_message(
+                    pil_image=image, text=rendered_user_prompt, role="user"
+                )
+
+                request_conversation = conversation.add(user_message)
+
+                llm_request = CompletionRequest[SchematismPage](
+                    input=request_conversation,
+                    structured_output=SchematismPage,
+                )
+                result = self.llm_engine.process(llm_request)
+
+                structured_response = result.output.structured_response
+
+                if isinstance(structured_response, SchematismPage):
+                    item.predictions = structured_response
+
+                    if structured_response.context and self.accumulate_context:
+                        previous_context = structured_response.context
+                        text_only_user_message = strip_images_from_message(user_message)
+                        conversation = conversation.add(text_only_user_message)
+                        conversation = conversation.add(result.output.to_message())
+
+                else:
+                    raise ValueError(
+                        f"Unexpected structured response: {structured_response}"
+                    )
+
+            except Exception as e:
+                logger.error(
+                    "LLM OCR extraction failed",
+                    error=str(e),
+                    image_path=item.image_path,
+                    sample_index=i,
+                )
+        return items
+
+    def _merge_items(
+        self,
+        lmv3_items: Sequence[PredictionDataItem],
+        ocr_items: Sequence[BaseDataItem],
+    ) -> list[PredictionDataItem]:
+
+        merger: Callable[[PredictionDataItem, BaseDataItem], PredictionDataItem] = (
+            lambda lmv3_item, ocr_item: PredictionDataItem(
+                image_path=lmv3_item.image_path,
+                text=ocr_item.text,
+                metadata=lmv3_item.metadata,
+                predictions=lmv3_item.predictions,
+            )
+        )
+
+        return list(map(merger, lmv3_items, ocr_items))
+
     @override
     async def execute(self, request: PredictWithLLMRequest) -> PredictWithLLMResponse:
         """
@@ -101,93 +223,36 @@ class PredictDatasetWithLLM(BaseUseCase[PredictWithLLMRequest, PredictWithLLMRes
         Returns:
             Response with predicted dataset and execution statistics
         """
-        items: list[PredictionDataItem] = []
 
-        for lmv3_item, ocr_item in zip(
+        merged_items = self._merge_items(
             request.lmv3_dataset.items, request.ocr_dataset.items
-        ):
+        )
 
-            if not (image_path := lmv3_item.image_path or ocr_item.image_path):
-                logger.warning(
-                    "Skipping item without image_path or text",
-                    sample_id=lmv3_item.metadata,
+        merged_dataset = PredictionDataset(items=merged_items)
+
+        all_items: list[PredictionDataItem] = []
+
+        if request.group_by_schematism_name:
+            for schematism_name, dataset in merged_dataset.group_by_schematism():
+                items = self._process_dataset_items(
+                    schematism_name=schematism_name,
+                    items=dataset.items,
+                    system_prompt=request.system_prompt,
+                    user_prompt=request.user_prompt,
                 )
-                continue
 
-            # Build context for prompts
-            llm_context = {}
-            if request.use_lmv3_hints and lmv3_item.predictions:
-                hints = lmv3_item.predictions.model_dump()
-                llm_context["hints"] = hints
+                all_items.extend(items)
 
-            llm_context["ocr_text"] = ocr_item.text
-
-            # Render prompts
-            system_prompt = self.prompt_renderer.render_prompt(
-                template_name=request.system_prompt, context=llm_context
-            )
-            user_prompt = self.prompt_renderer.render_prompt(
-                template_name=request.user_prompt, context=llm_context
-            )
-
-
-            image = self.image_storage.load_image(image_path)
-
-            # Build conversation
-            system_message = construct_text_message(text=system_prompt, role="system")
-            user_message = construct_image_message(
-                pil_image=image, text=user_prompt, role="user"
-            )
-            messages = (system_message, user_message)
-            conversation = Conversation(messages=messages)
-
-            # Process with cached engine - caching happens automatically!
-            llm_request = CompletionRequest(
-                input=conversation,
-                structured_output=SchematismPage,
-            )
-            result = self.llm_engine.process(llm_request)
-
-            structured_response = result.output.structured_response
-            if isinstance(structured_response, SchematismPage):
-                produced_item = PredictionDataItem(
-                    image_path=lmv3_item.image_path,
-                    text=ocr_item.text,
-                    metadata=lmv3_item.metadata,
-                    predictions=structured_response
-                )
-            else:
-                raise ValueError(f"Unexpected structured response: {structured_response}")
-
-            items.append(produced_item)
-
-        # Get stats from cached engine
-        if isinstance(self.llm_engine, CachedEngine):
-            stats = self.llm_engine.stats
-            llm_executions = stats["misses"]
-            cache_hits = stats["hits"]
         else:
-            llm_executions = len(items)
-            cache_hits = 0
+            items = self._process_dataset_items(
+                items=merged_dataset.items,
+                system_prompt=request.system_prompt,
+                user_prompt=request.user_prompt,
+            )
 
-        success_rate = (
-            len(items) / len(request.lmv3_dataset.items)
-            if request.lmv3_dataset.items
-            else 0.0
-        )
-
-        logger.info(
-            "LLM prediction completed",
-            total_items=len(request.lmv3_dataset.items),
-            llm_executions=llm_executions,
-            cache_hits=cache_hits,
-            success_rate=success_rate,
-            cache_enabled=isinstance(self.llm_engine, CachedEngine),
-        )
+            all_items.extend(items)
 
         return PredictWithLLMResponse(
-            dataset=BaseDataset[PredictionDataItem](items=items),
-            llm_executions=llm_executions,
-            cache_hits=cache_hits,
-            success_rate=success_rate,
+            dataset=PredictionDataset(items=all_items),
+            execution_stats=self.llm_engine.stats,
         )

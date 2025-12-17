@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 from typing import Self, final, override
+
 from tenacity import (
     retry,
     stop_after_attempt,
@@ -9,7 +10,7 @@ from tenacity import (
 )
 from pydantic import BaseModel
 
-from notarius.application.ports.outbound.engine import ConfigurableEngine
+from notarius.application.ports.outbound.engine import ConfigurableEngine, track_stats
 from notarius.domain.entities.completions import BaseProviderResponse
 from notarius.domain.protocols import BaseRequest, BaseResponse
 
@@ -18,6 +19,7 @@ from notarius.infrastructure.llm.conversation import (
 )
 from notarius.infrastructure.llm.providers.factory import llm_provider_factory
 from notarius.schemas.configs import LLMEngineConfig
+from notarius.schemas.configs.llm_model_config import ClientConfig, BackendType
 from notarius.shared.constants import MAX_LLM_RETRIES
 
 
@@ -60,15 +62,31 @@ class LLMEngine(
     """Engine for interacting with LLM providers using domain types."""
 
     def __init__(self, config: LLMEngineConfig):
+        self._init_stats()
         self.config = config
         self.provider = llm_provider_factory(config)
 
+    def update_client(self, client_config: ClientConfig):
+        self.config.clients[self.used_backend] = client_config
+        self.provider = llm_provider_factory(self.config)
+
+    @property
+    def used_backend(self) -> str:
+        return self.config.backend.type
+
     @property
     def used_model(self) -> str:
-        backend = self.config.backend.type
         return self.config.clients.get(
-            backend
+            self.used_backend,
         ).model  # pyright: ignore[reportOptionalMemberAccess]
+
+    def get_client_config(
+        self, backend_type: BackendType | None = None
+    ) -> ClientConfig:
+        client_config = self.config.clients.get(self.used_backend or backend_type or "")
+        if client_config is None:
+            raise ValueError(f"No client config found for backend {self.used_backend}")
+        return client_config
 
     @classmethod
     @override
@@ -76,12 +94,13 @@ class LLMEngine(
         return cls(config=config)
 
     @override
+    @track_stats
     @retry(
         stop=stop_after_attempt(MAX_LLM_RETRIES),
         wait=wait_exponential(multiplier=1, min=2, max=10),
         reraise=True,
     )
-    def process[T: BaseModel](
+    def process[T: BaseModel](  # pyright: ignore[reportIncompatibleMethodOverride]
         self,
         request: CompletionRequest[T],
     ) -> CompletionResult[T]:
@@ -89,9 +108,9 @@ class LLMEngine(
             request.input.messages, text_format=request.structured_output
         )
 
-        conversation = request.input.add(response.to_message())
+        # conversation = request.input.add(response.to_message())
 
         return CompletionResult[T](
             output=response,
-            conversation=conversation,
+            conversation=request.input,
         )

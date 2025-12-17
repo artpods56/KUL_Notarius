@@ -52,7 +52,7 @@ class TrainingConfig(BaseModel):
         default="eval_overall_f1", description="Metric to use for best model selection"
     )
     report_to: str = Field(
-        default="wandb", description="Where to report training results"
+        default="wandb", description="Where to report training sample"
     )
     run_name: str = Field(
         default="layoutlmv3-large-focal", description="Run description"

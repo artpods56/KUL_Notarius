@@ -65,3 +65,19 @@ class ChatMessage:
 ChatMessageList = list[ChatMessage] | tuple[ChatMessage, ...]
 
 
+def strip_images_from_message(message: ChatMessage) -> ChatMessage:
+    """Create a new message with image content removed.
+
+    Useful for maintaining conversation history without accumulating
+    large base64 image payloads.
+
+    Args:
+        message: Original message potentially containing images
+
+    Returns:
+        New ChatMessage with only text content preserved
+    """
+    text_only_content = [
+        part for part in message.content if isinstance(part, TextContent)
+    ]
+    return ChatMessage(role=message.role, content=text_only_content)

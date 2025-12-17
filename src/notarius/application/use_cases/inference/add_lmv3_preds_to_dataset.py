@@ -12,7 +12,7 @@ from notarius.infrastructure.ml_models.lmv3.engine_adapter import (
     LMv3Engine,
     LMv3Request,
 )
-from notarius.orchestration.resources import ImageStorageResource
+from notarius.orchestration.resources.base import ImageStorageResource
 from notarius.schemas.data.pipeline import BaseDataItem, BaseDataset, PredictionDataItem
 from notarius.shared.logger import Logger
 
@@ -95,7 +95,7 @@ class EnrichDatasetWithLMv3(BaseUseCase[EnrichWithLMv3Request, EnrichWithLMv3Res
                 continue
 
             image = self.image_storage.load_image(item.image_path).convert("RGB")
-            logger.info(f"Processing {i+1}/{dataset_len} sample with LMv3.")
+            logger.info(f"Processing {i + 1}/{dataset_len} sample with LMv3.")
 
             # Process with cached engine - caching happens automatically!
             lmv3_request = LMv3Request(input=image)

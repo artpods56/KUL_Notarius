@@ -5,6 +5,7 @@ Configs for assets defined in this file lives in [[transformation_config.py]]
 import random
 from typing import Any, Mapping, cast, Iterable, Literal, Sequence
 
+from numpy.random import f
 import pandas as pd
 import dagster as dg
 from dagster import (
@@ -14,7 +15,9 @@ from dagster import (
     TableSchema,
 )
 from datasets import Dataset
+from pydantic import Field
 
+from notarius.infrastructure.persistence.storage import ImageRepository
 from notarius.orchestration.constants import (
     DataSource,
     AssetLayer,
@@ -24,10 +27,8 @@ from notarius.orchestration.constants import (
 
 import structlog
 
-from notarius.orchestration.resources import ImageStorageResource
+from notarius.orchestration.resources.base import ImageStorageResource
 from notarius.schemas.data.dataset import (
-    BaseHuggingFaceDatasetSchema,
-    ETLSpecificDatasetFields,
     SchematismsDatasetItem,
 )
 from notarius.schemas.data.pipeline import (
@@ -36,6 +37,9 @@ from notarius.schemas.data.pipeline import (
     BaseMetaData,
     BaseDataItem,
     GtAlignedPredictionDataItem,
+    # Concrete subclasses for pickle compatibility
+    BaseItemDataset,
+    GroundTruthDataset,
 )
 from notarius.domain.entities.schematism import SchematismEntry, SchematismPage
 
@@ -69,6 +73,14 @@ def asset_factory__eval__aligned_dataframe_pandas(
             flat_entries = []
 
             page_a, page_b = aligned_pages
+
+            # Handle empty pages - emit a single row with all None values
+            if not page_a.entries and not page_b.entries:
+                empty_row = {}
+                for key in SchematismEntry.model_fields.keys():
+                    empty_row[f"{key}_a"] = None
+                    empty_row[f"{key}_b"] = None
+                return [empty_row]
 
             for entry_a, entry_b in zip(page_a.entries, page_b.entries):
                 flattened_pages_dict = {}
@@ -119,12 +131,16 @@ eval__aligned_parsed_dataframe__pandas = asset_factory__eval__aligned_dataframe_
 )
 
 
-def asset_factory__pydantic_dataset[ModelT: BaseDataItem](
+class BaseDatasetConfig(dg.Config):
+    pass
+
+
+def asset_factory__base_dataset(
     asset_name: str,
     ins: Mapping[str, AssetIn],
-    pydantic_model: type[ModelT],
-    gt_source: Literal["source", "parsed"] | None = None,
 ):
+    """Factory for creating base dataset assets (without ground truth)."""
+
     @dg.asset(
         name=asset_name,
         key_prefix=[AssetLayer.INT, DataSource.HUGGINGFACE],
@@ -132,11 +148,13 @@ def asset_factory__pydantic_dataset[ModelT: BaseDataItem](
         kinds={Kinds.PYTHON, Kinds.PYDANTIC},
         ins=ins,
     )
-    def _asset__pydantic_dataset(
+    def _asset__base_dataset(
         context: AssetExecutionContext,
-        dataset: Dataset,
-        image_storage: ImageStorageResource,
-    ):
+        hf_dataset: Dataset,
+        config: BaseDatasetConfig,
+        images_repository: dg.ResourceParam[ImageRepository],
+        pdf_dataset: BaseItemDataset | None = None,
+    ) -> BaseItemDataset:
         """Convert HuggingFace dataset to Pydantic BaseDataset with BaseDataItem.
 
         This asset creates a base dataset containing only image and metadata,
@@ -145,70 +163,158 @@ def asset_factory__pydantic_dataset[ModelT: BaseDataItem](
 
         Args:
             context: Dagster execution context for logging and metadata
-            dataset: HuggingFace dataset to convert
-            config: Configuration for field mappings
+            hf_dataset: HuggingFace dataset to convert
+            config: Configuration for the asset
 
         Returns:
             BaseDataset containing BaseDataItem instances
         """
 
-        items: list[ModelT] = []
+        items: list[BaseDataItem] = []
 
-        for sample in cast(Iterable[SchematismsDatasetItem], dataset):
+        for i, sample in enumerate(cast(Iterable[SchematismsDatasetItem], hf_dataset)):
+            image_name = f"{sample['schematism_name']}_{sample['filename']}"
 
-            item_structure: dict[str, Any] = {
-                "image_path": image_storage.save_image(sample["image"]),
-                "metadata": BaseMetaData(
-                    sample_id=sample["sample_id"],
-                    schematism_name=sample["schematism_name"],
-                    filename=sample["filename"],
-                ),
-            }
+            # Skip writing if image already exists on disk
+            if images_repository.exists(image_name):
+                image_path = images_repository.get_path(image_name)
+            else:
+                image_path = images_repository.add(sample["image"], image_name)
 
-            if gt_source:
-                item_structure["ground_truth"] = sample[gt_source]
-
-            item = pydantic_model(
-                **item_structure,
+            metadata = BaseMetaData(
+                sample_id=sample.get("sample_id", i),
+                schematism_name=sample["schematism_name"],
+                filename=sample["filename"],
             )
+            items.append(BaseDataItem(image_path=str(image_path), metadata=metadata))
 
-            items.append(item)
+        if pdf_dataset:
+            items.extend(pdf_dataset.items)
+
+        combined_dataset = BaseItemDataset(items=items)
 
         context.add_output_metadata(
             {
-                "num_items": MetadataValue.int(len(items)),
+                "all_items": MetadataValue.int(len(items)),
+                "loaded_schematisms": MetadataValue.json(
+                    {
+                        schematism_name: len(dataset.items)
+                        for schematism_name, dataset in combined_dataset.group_by_schematism()
+                    }
+                ),
                 "random_sample": MetadataValue.json(random.choice(items).model_dump()),
             }
         )
+        return combined_dataset
 
-        if pydantic_model is GroundTruthDataItem:
-            return BaseDataset[GroundTruthDataItem](
-                items=cast(Sequence[GroundTruthDataItem], items)
+    return _asset__base_dataset
+
+
+class GroundTruthDatasetConfig(dg.Config):
+    ground_truth_source: str = Field(
+        description="Source field name for ground truth data in the HuggingFace dataset"
+    )
+
+
+def asset_factory__ground_truth_dataset(
+    asset_name: str,
+    ins: Mapping[str, AssetIn],
+):
+    """Factory for creating ground truth dataset assets."""
+
+    @dg.asset(
+        name=asset_name,
+        key_prefix=[AssetLayer.INT, DataSource.HUGGINGFACE],
+        group_name=ResourceGroup.DATA,
+        kinds={Kinds.PYTHON, Kinds.PYDANTIC},
+        ins=ins,
+    )
+    def _asset__ground_truth_dataset(
+        context: AssetExecutionContext,
+        hf_dataset: Dataset,
+        config: GroundTruthDatasetConfig,
+        images_repository: dg.ResourceParam[ImageRepository],
+    ):
+        """Convert HuggingFace dataset to Pydantic GroundTruthDataset.
+
+        This asset creates a dataset containing image, metadata, and ground truth.
+        It is used for evaluation and alignment pipelines.
+
+        Args:
+            context: Dagster execution context for logging and metadata
+            hf_dataset: HuggingFace dataset to convert
+            config: Configuration specifying the ground truth source field
+
+        Returns:
+            GroundTruthDataset containing GroundTruthDataItem instances
+        """
+
+        items: list[GroundTruthDataItem] = []
+
+        for i, sample in enumerate(cast(Iterable[SchematismsDatasetItem], hf_dataset)):
+            image_name = f"{sample['schematism_name']}_{sample['filename']}"
+
+            if images_repository.exists(image_name):
+                image_path = images_repository.get_path(image_name)
+            else:
+                image_path = images_repository.add(sample["image"], image_name)
+
+            metadata = BaseMetaData(
+                sample_id=sample.get("sample_id", i),
+                schematism_name=sample["schematism_name"],
+                filename=sample["filename"],
             )
-        elif pydantic_model is BaseDataItem:
-            return BaseDataset[BaseDataItem](items=cast(Sequence[BaseDataItem], items))
-        else:
-            raise ValueError(f"Unsupported pydantic model type: {pydantic_model}")
 
-    return _asset__pydantic_dataset
+            ground_truth: SchematismPage | None = sample.get(
+                config.ground_truth_source, None
+            )
+
+            if ground_truth is None:
+                raise ValueError(
+                    f"Ground truth field '{config.ground_truth_source}' not found in sample: {sample}"
+                )
+
+            items.append(
+                GroundTruthDataItem(
+                    ground_truth=ground_truth,
+                    image_path=str(image_path),
+                    metadata=metadata,
+                )
+            )
+
+        dataset = GroundTruthDataset(items=items)
+
+        context.add_output_metadata(
+            {
+                "all_items": MetadataValue.int(len(items)),
+                "loaded_schematisms": MetadataValue.json(
+                    {
+                        schematism_name: len(ds.items)
+                        for schematism_name, ds in dataset.group_by_schematism()
+                    }
+                ),
+                "random_sample": MetadataValue.json(random.choice(items).model_dump()),
+            }
+        )
+        return dataset
+
+    return _asset__ground_truth_dataset
 
 
-base__dataset__pydantic = asset_factory__pydantic_dataset(
+base__dataset__pydantic = asset_factory__base_dataset(
     asset_name="base__dataset__pydantic",
-    ins={"dataset": AssetIn(key="filtered__hf__dataset")},
-    pydantic_model=BaseDataItem,
+    ins={
+        "hf_dataset": AssetIn(key="preprocessed__hf__dataset"),
+        "pdf_dataset": AssetIn(key="raw__pdf__dataset"),
+    },
 )
 
-gt__source_dataset__pydantic = asset_factory__pydantic_dataset(
+gt__source_dataset__pydantic = asset_factory__ground_truth_dataset(
     asset_name="gt__source_dataset__pydantic",
-    ins={"dataset": AssetIn(key="filtered__hf__dataset")},
-    pydantic_model=GroundTruthDataItem,
-    gt_source="source",
+    ins={"hf_dataset": AssetIn(key="preprocessed__hf__dataset")},
 )
 
-gt__parsed_dataset__pydantic = asset_factory__pydantic_dataset(
+gt__parsed_dataset__pydantic = asset_factory__ground_truth_dataset(
     asset_name="gt__parsed_dataset__pydantic",
-    ins={"dataset": AssetIn(key="filtered__hf__dataset")},
-    pydantic_model=GroundTruthDataItem,
-    gt_source="parsed",
+    ins={"hf_dataset": AssetIn(key="preprocessed__hf__dataset")},
 )

@@ -3,6 +3,7 @@
 This module provides convenient factory functions that combine engines
 with their cache backends to create cached versions.
 """
+
 from typing import Any
 
 from notarius.application.ports.outbound.cached_engine import CachedEngine

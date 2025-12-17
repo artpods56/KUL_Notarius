@@ -1,30 +1,24 @@
 from __future__ import annotations
 from dagster import ConfigurableResource
-from typing import Any, Callable, Literal, ClassVar, cast
+from typing import ClassVar, cast, override
 from contextlib import contextmanager
 from pathlib import Path
 
-from typing import Any
 
 import pandas as pd
 import wandb
+import weave
 from PIL import Image
-from dagster import ConfigurableResource
-from omegaconf import DictConfig
 from pydantic import PrivateAttr
 
 from notarius.infrastructure.cache.storage import get_image_hash
 from notarius.infrastructure.config.manager import config_manager
-from notarius.schemas.configs.dataset_config import BaseDatasetConfig
-from notarius.schemas.data.pipeline import BaseDataset
 from notarius.shared.constants import PDF_SOURCE_DIR
 
 from notarius.infrastructure.config.constants import (
     ConfigType,
-    ConfigSubTypes,
     ModelsConfigSubtype,
 )
-from notarius.infrastructure.config.manager import get_config_manager
 from notarius.infrastructure.llm.engine_adapter import LLMEngine
 from notarius.infrastructure.ml_models.lmv3.engine_adapter import LMv3Engine
 from notarius.infrastructure.ocr.engine_adapter import OCREngine
@@ -42,71 +36,6 @@ class PdfFilesResource(
 
     def get_pdf_paths(self) -> list[Path]:
         return list(Path(self.pdf_dir).glob("**/*.pdf"))
-
-
-OpType = Literal["filter", "map"]
-OpRegistryType = dict[tuple[OpType, str], Callable[[Any], Any]]
-
-
-class OpRegistry(ConfigurableResource):  # pyright: ignore[reportMissingTypeArgument]
-    """
-    Registry for operations using class-level storage.
-
-    Note: _ops_registry is a ClassVar, not a Pydantic field,
-    so it's shared across all instances and not serialized.
-    """
-
-    # ✅ Use ClassVar to tell Pydantic this is NOT a model field
-    _ops_registry: ClassVar[OpRegistryType] = {}
-
-    @classmethod
-    def register(cls, op_type: OpType, name: str):
-        """
-        Decorator to register an operation.
-
-        Args:
-            op_type: Type of operation ('filter' or 'map')
-            name: Unique name for the operation
-
-        Raises:
-            RuntimeError: If operation already registered
-        """
-
-        def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
-            op_key = (op_type, name)
-
-            if op_key in cls._ops_registry:
-                raise RuntimeError(
-                    f"Operation '{name}' of type '{op_type}' already registered"
-                )
-
-            cls._ops_registry[op_key] = func
-
-            # Return the original function unchanged
-            return func
-
-        return decorator
-
-    def get(self, op_type: OpType, name: str):
-        """Retrieve a registered operation (instance method for Dagster compatibility)."""
-        return self._ops_registry.get((op_type, name), None)
-
-    @classmethod
-    def get_op(cls, op_type: OpType, name: str):
-        """Retrieve a registered operation (class method alternative)."""
-        return cls._ops_registry.get((op_type, name))
-
-    @classmethod
-    def list_operations(cls, op_type: OpType | None = None) -> list[tuple[OpType, str]]:
-        """List all registered operations."""
-        if op_type is None:
-            return list(cls._ops_registry.keys())
-        return [key for key in cls._ops_registry.keys() if key[0] == op_type]
-
-    @classmethod
-    def clear(cls) -> None:
-        """Clear all registered operations. Useful for testing."""
-        cls._ops_registry.clear()
 
 
 class ExcelWriterResource(
@@ -143,10 +72,16 @@ class WandBRunResource(
         return WandBRunResource._wandb_run
 
 
+class WeaveResource(ConfigurableResource):  # pyright: ignore[reportMissingTypeArgument]
+    def init_weave(self, run_name: str):
+        return weave.init(run_name)
+
+
 class ImageStorageResource(
     ConfigurableResource  # pyright: ignore[reportMissingTypeArgument]
 ):
     image_storage_path: str
+    storage_root: str
 
     def save_image(self, image: Image.Image) -> str:
         image_hash = get_image_hash(image)
@@ -235,11 +170,12 @@ class LLMEngineResource(
 ):
     """LLM _engine resource for language model operations."""
 
-    _engine: LLMEngine | None = PrivateAttr(default=None)
+    _engine_config: LLMEngineConfig | None = PrivateAttr(default=None)
 
+    @override
     def setup_for_execution(self, context):
         """Initialize the LLM _engine."""
-        llm_config = cast(
+        self._engine_config = cast(
             LLMEngineConfig,
             config_manager.load_config_as_model(
                 config_name="llm_model_config",
@@ -247,12 +183,13 @@ class LLMEngineResource(
                 config_subtype=ModelsConfigSubtype.LLM,
             ),
         )
-        self._engine = LLMEngine.from_config(config=llm_config)
+
+    def get_engine_config(self) -> LLMEngineConfig:
+        """Get the LLM _engine config."""
+        if self._engine_config is None:
+            raise RuntimeError("LLMEngineConfig not initialized.")
+        return self._engine_config
 
     def get_engine(self) -> LLMEngine:
         """Get the LLM _engine instance."""
-        if self._engine is None:
-            raise RuntimeError(
-                "LLMEngine not initialized. Call setup_for_execution first."
-            )
-        return self._engine
+        return LLMEngine.from_config(config=self.get_engine_config().model_copy())

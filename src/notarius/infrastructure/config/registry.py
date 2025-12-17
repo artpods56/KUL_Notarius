@@ -1,6 +1,6 @@
 """Config registry for automatic model discovery and validation."""
 
-from typing import Dict, List, Optional, Tuple, Type, Any, TypeVar
+from typing import Dict, Optional, Any
 from notarius.infrastructure.config.exceptions import ConfigNotRegisteredError
 from pydantic import BaseModel, ValidationError
 

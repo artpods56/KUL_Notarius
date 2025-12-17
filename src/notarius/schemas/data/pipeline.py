@@ -1,11 +1,16 @@
-from collections.abc import Sequence
-from typing import Any, Dict, Literal, Generic, TypeVar
+from collections import defaultdict
+from collections.abc import Iterator, Sequence
+from typing import Any, Dict, Generic, Literal, TypeVar, Self
 
 from PIL import Image
 from pydantic import BaseModel, Field
 
 from notarius.schemas.data.metrics import PageDataMetrics
 from notarius.domain.entities.schematism import SchematismPage
+
+# Module-level TypeVar for pickle/dill compatibility
+# PEP 695 syntax (class Foo[T]) creates scoped type params that can't be pickled
+ItemT = TypeVar("ItemT", bound="BaseDataItem")
 
 PageDataSourceField = Literal[
     "ground_truth",
@@ -64,58 +69,57 @@ class EvaluationDataItem(BaseDataItem, HasGroundTruthMixin):
     pass
 
 
-# TypeVar for generic BaseDataset - using older syntax for pickle compatibility
-ItemT = TypeVar("ItemT", bound=BaseDataItem)
+class BaseDataset(BaseModel, Generic[ItemT]):
+    """Generic dataset container that can be pickled/dill serialized.
 
+    Note: Use concrete subclasses (GroundTruthDataset, PredictionDataset, etc.)
+    instead of BaseDataset[SomeType] for pickle compatibility.
+    """
 
-class BaseDataset[ItemT: BaseDataItem](BaseModel):
     items: Sequence[ItemT] = Field(description="List of items")
 
+    def group_by_schematism(self) -> Iterator[tuple[str, Self]]:
+        groups: dict[str, list[ItemT]] = defaultdict(list)
 
-class PipelineData(BaseModel):
-    """
-    Pipeline data with required fields for ingestion and optional fields for pipeline stages
-    """
+        for item in self.items:
+            if item.metadata is None:
+                raise ValueError("Metadata is required for grouping")
+            groups[item.metadata.schematism_name].append(item)
 
-    # Required fields - available at ingestion time
-    image: Image.Image | None = Field(
-        default=None, description="Image used for prediction."
-    )
-    ground_truth: SchematismPage | None = Field(
-        default=None, description="Ground truth data."
-    )
-    source_ground_truth: SchematismPage | None = Field(
-        default=None, description="Source truth data."
-    )
+        for key, items in groups.items():
+            yield (key, self.__class__(items=items))
 
-    # Optional fields - populated during pipeline processing
-    text: str | None = Field(default=None, description="OCR text extracted from image.")
-    language: str | None = Field(default=None, description="Detected language code.")
-    language_confidence: float | None = Field(
-        default=None, description="Confidence score for language detection."
-    )
 
-    # Model prediction fields
-    lmv3_prediction: SchematismPage | None = Field(
-        default=None, description="Predictions from LayoutLMv3 model."
-    )
-    llm_prediction: SchematismPage | None = Field(
-        default=None, description="Predictions from LLM model."
-    )
-    parsed_prediction: SchematismPage | None = Field(
-        default=None, description="Parsed predictions_data from LLM model."
-    )
-    parsed_messages: str | None = Field(
-        default=None, description="Parsed messages from LLM model."
-    )
+# Concrete subclasses for pickle/dill serialization compatibility
+# Parameterized generics like BaseDataset[GroundTruthDataItem] cannot be pickled
+# because they don't exist as module-level attributes
 
-    # Additional metadata
-    metadata: Dict[str, Any] = Field(
-        default_factory=dict, description="Metadata for this pipeline."
-    )
-    evaluation_results: PageDataMetrics | None = Field(
-        default=None, description="Results from evaluation step."
-    )
 
-    class Config:
-        arbitrary_types_allowed = True
+class BaseItemDataset(BaseDataset[BaseDataItem]):
+    """Dataset containing base data items (no ground truth or predictions)."""
+
+    pass
+
+
+class GroundTruthDataset(BaseDataset[GroundTruthDataItem]):
+    """Dataset containing ground truth items."""
+
+    pass
+
+
+class PredictionDataset(BaseDataset[PredictionDataItem]):
+    """Dataset containing prediction items."""
+
+    pass
+
+
+class AlignedDataset(BaseDataset[GtAlignedPredictionDataItem]):
+    """Dataset containing aligned prediction/ground truth items."""
+
+    pass
+
+
+class EvaluationDataset(BaseDataset[EvaluationDataItem]):
+    """Dataset containing evaluation items."""
+
+    pass

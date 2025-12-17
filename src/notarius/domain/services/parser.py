@@ -107,7 +107,7 @@ class Parser:
         dictionaries inside it) would still reference the same objects, causing
         in-place mutation of the original *raw* prediction. This resulted in the
         “raw_llm_response” column in the W&B table containing already-parsed
-        results. We therefore perform a deep copy so every nested structure is
+        sample. We therefore perform a deep copy so every nested structure is
         duplicated before modification.
         """
 

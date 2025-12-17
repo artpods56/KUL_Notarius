@@ -1,4 +1,4 @@
-from typing import Dict, Literal
+from typing import Literal
 
 from pydantic import BaseModel, Field, ConfigDict
 
@@ -25,7 +25,6 @@ BackendType = Literal["llama", "lm_studio", "openai", "mistral", "openrouter"]
 
 
 class ClientConfig(BaseModel):
-
     model_config = ConfigDict(extra="forbid")
 
     backend: BackendType = Field(description="Which backend this client uses")

@@ -1,35 +1,12 @@
 import base64
 from io import BytesIO
 from pathlib import Path
-from typing import Any, Literal
-from collections.abc import Sequence
+from typing import Literal
 import uuid
 from PIL import Image
-from openai.types.chat import (
-    ChatCompletionMessageParam,
-    ChatCompletionSystemMessageParam,
-    ChatCompletionUserMessageParam,
-    ChatCompletionContentPartTextParam,
-    ChatCompletionContentPartImageParam,
-)
-from openai.types.responses import (
-    EasyInputMessageParam,
-    ResponseInputImage,
-    ResponseInputMessageItem,
-    ResponseInputParam,
-    ResponseInputText,
-    ResponseInputMessageContentList,
-    ResponseInputItemParam,
-    ResponseInputImageParam,
-    ResponseInputTextParam,
-    Response,
-)
-Response
+
+
 from notarius.domain.entities.messages import ChatMessage, TextContent, ImageContent
-from notarius.infrastructure.llm.prompt_manager import Jinja2PromptRenderer
-
-
-# ... (all your other imports)
 
 
 def make_all_properties_required(schema: dict) -> dict:
@@ -72,11 +49,19 @@ def parse_model_name(model_name: str) -> str:
     return model_name.replace("/", "_")
 
 
-def encode_image_to_base64(pil_image) -> str:
+def encode_image_to_base64(pil_image: Image.Image) -> str:
     """Convert PIL image to base64 string."""
     buffer = BytesIO()
-    pil_image.convert("RGB").save(buffer, format="JPEG")
-    return base64.b64encode(buffer.getvalue()).decode("utf-8")
+    # Avoid creating intermediate image if already RGB
+    if pil_image.mode == "RGB":
+        pil_image.save(buffer, format="JPEG")
+    else:
+        converted = pil_image.convert("RGB")
+        converted.save(buffer, format="JPEG")
+        converted.close()
+    result = base64.b64encode(buffer.getvalue()).decode("utf-8")
+    buffer.close()
+    return result
 
 
 def generate_id() -> str:
@@ -111,12 +96,7 @@ def construct_image_message(
     Returns:
         Domain ChatMessage with text and image content parts
     """
-
-    # Ensure image is in RGB format
-    if pil_image.mode != "RGB":
-        pil_image = pil_image.convert("RGB")
-
-    # Convert to base64 data URL
+    # encode_image_to_base64 handles RGB conversion internally with proper cleanup
     base64_image = encode_image_to_base64(pil_image)
     image_url = f"data:image/jpeg;base64,{base64_image}"
 

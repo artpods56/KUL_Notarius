@@ -1,4 +1,4 @@
-from typing import List, Literal, Optional, Union, final
+from typing import Literal, final
 
 import torch
 import torch.nn as nn
@@ -42,9 +42,9 @@ class FocalLoss(nn.Module):
             and alpha is not None
             and isinstance(alpha, (list, torch.Tensor))
         ):
-            assert (
-                num_classes is not None
-            ), "num_labels must be specified for multi-class classification"
+            assert num_classes is not None, (
+                "num_labels must be specified for multi-class classification"
+            )
             if isinstance(alpha, list):
                 self.alpha = torch.Tensor(alpha)
             else:

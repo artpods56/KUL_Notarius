@@ -165,9 +165,7 @@ def sliding(
             bbox_key = unnormal_box
 
             # Decode the token
-            input_id = encoding["input_ids"][window_idx][
-                token_idx
-            ]  # pyright: ignore[reportIndexIssue]
+            input_id = encoding["input_ids"][window_idx][token_idx]  # pyright: ignore[reportIndexIssue]
             token = tokenizer.decode(input_id)
 
             if bbox_key not in box_token_dict:
@@ -268,6 +266,7 @@ def repair_bio_labels(labels: list[str]) -> list[str]:
             prev_type = None
     return repaired
 
+
 def bio_to_spans(words: list[str], labels: list[str]) -> list[tuple[str, str]]:
     """Convert parallel words and BIO labels into entity spans.
 
@@ -308,10 +307,9 @@ def bio_to_spans(words: list[str], labels: list[str]) -> list[tuple[str, str]]:
         spans.append((ent_type, " ".join(buff)))
     return spans
 
+
 def build_page_json(
-    words: list[str],
-    bboxes: list[BBox],
-    labels: list[str]
+    words: list[str], bboxes: list[BBox], labels: list[str]
 ) -> dict[str, Any]:
     """Build the target JSON structure from BIO-tagged annotations.
 

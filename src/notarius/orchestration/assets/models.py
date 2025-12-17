@@ -2,7 +2,6 @@ from typing import Any, Mapping
 
 import dagster as dg
 from dagster import AssetIn, AssetExecutionContext, MetadataValue
-from omegaconf import DictConfig, OmegaConf
 from pydantic import BaseModel
 
 from notarius.application.ports.outbound.engine import ConfigurableEngine

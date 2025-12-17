@@ -45,7 +45,7 @@ class LLMExtractionService:
 
     This service encapsulates the business logic for:
     - Validating extraction inputs
-    - Post-processing extraction results
+    - Post-processing extraction sample
     - Applying business rules to extracted data
     - Computing confidence scores
 
@@ -155,7 +155,7 @@ class LLMExtractionService:
         """
         confidence = 1.0
 
-        # Reduce confidence for cached results (may be stale)
+        # Reduce confidence for cached sample (may be stale)
         if from_cache:
             confidence *= 0.95
 
@@ -163,7 +163,9 @@ class LLMExtractionService:
         page_dict = page.model_dump()
         non_empty_fields = sum(1 for v in page_dict.values() if v)
         total_fields = len(page_dict)
-        field_completion_rate = non_empty_fields / total_fields if total_fields > 0 else 0
+        field_completion_rate = (
+            non_empty_fields / total_fields if total_fields > 0 else 0
+        )
         confidence *= field_completion_rate
 
         # Reduce confidence if input was low quality

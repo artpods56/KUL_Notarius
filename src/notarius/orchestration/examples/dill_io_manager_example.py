@@ -114,9 +114,7 @@ defs = Definitions(
         processed_results,
     ],
     resources={
-        "io_manager": dill_io_manager(
-            base_dir=str(TMP_DIR / "dagster_dill_examples")
-        ),
+        "io_manager": dill_io_manager(base_dir=str(TMP_DIR / "dagster_dill_examples")),
     },
 )
 

@@ -2,6 +2,7 @@ from notarius.orchestration.assets.transform.predict import (
     OcrConfig,
     LMv3Config,
     LLMConfig,
+    LLMOcrConfig,
 )
 from notarius.orchestration.constants import DataSource, AssetLayer
 from notarius.orchestration.utils import AssetKeyHelper
@@ -55,9 +56,31 @@ PRED__LLM_ENRICHED_DATASET__PYDANTIC__OP_CONFIG = {
         "pydantic",
     ): {
         "config": LLMConfig(
-            system_prompt="system.j2",
-            user_prompt="user.j2",
+            system_prompt="tasks/accumulative_extraction/system.j2",
+            user_prompt="tasks/accumulative_extraction/user.j2",
             use_lmv3_hints=True,
+            accumulate_context=True,
+        ).model_dump()
+    }
+}
+
+"""
+Asset: [[predict.py#pred__llm_ocr_enriched_dataset__pydantic]]
+Defined in: src/orchestration/assets/predict.py
+Resolves to: stg__huggingface__pred__llm_ocr_enriched_dataset__pydantic
+"""
+PRED__LLM_OCR_ENRICHED_DATASET__PYDANTIC__OP_CONFIG = {
+    AssetKeyHelper.build_prefixed_key(
+        AssetLayer.STG,
+        DataSource.HUGGINGFACE,
+        "pred",
+        "llm_ocr_enriched_dataset",
+        "pydantic",
+    ): {
+        "config": LLMOcrConfig(
+            system_prompt="tasks/ocr/system.j2",
+            user_prompt="tasks/ocr/user.j2",
+            enable_cache=True,
         ).model_dump()
     }
 }

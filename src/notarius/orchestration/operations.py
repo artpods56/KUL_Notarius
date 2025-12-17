@@ -1,13 +1,21 @@
-import json
-from typing import List, Callable, Any
+"""Utility functions for dataset operations.
 
-from notarius.orchestration.resources import OpRegistry
+This module provides composable utilities for map/filter operations on datasets.
+"""
+
+from typing import Callable, Any
 
 
-def merge_maps(mappers: List[Callable]) -> Callable:
-    """
-    Merges multiple `map`-like functions into a single callable.
+def merge_maps(mappers: list[Callable]) -> Callable:
+    """Merge multiple map functions into a single callable.
+
     Each function should accept a single example and return a modified example.
+
+    Args:
+        mappers: List of map functions to compose.
+
+    Returns:
+        A single function that applies all mappers in sequence.
     """
 
     def merged_map(example):
@@ -18,30 +26,16 @@ def merge_maps(mappers: List[Callable]) -> Callable:
     return merged_map
 
 
-def map_labels(classes_to_remove: set[str]):
-    def _map_fn(example):
-        example["labels"] = [
-            label if label not in classes_to_remove else "O"
-            for label in example["labels"]
-        ]
-        return example
-
-    return _map_fn
-
-
-def negate_op(op: Callable[[dict[str, Any]], bool]) -> Callable[[dict[str, Any]], bool]:
-    """Negate a filter operation."""
-
-    def _f(x: dict[str, Any]) -> bool:
-        return not op(x)
-
-    return _f
-
-
 def merge_filters(filters: list[Callable]) -> Callable:
-    """
-    Merge multiple filter functions into a single function.
+    """Merge multiple filter functions into a single function.
+
     Each filter function should return True for examples to keep.
+
+    Args:
+        filters: List of filter functions to compose.
+
+    Returns:
+        A single function that returns True only if all filters pass.
     """
 
     def merged_filter(example):
@@ -50,53 +44,37 @@ def merge_filters(filters: list[Callable]) -> Callable:
     return merged_filter
 
 
-@OpRegistry.register(op_type="filter", name="filter_schematisms")
-def filter_schematisms(to_filter: str | list[str]) -> Callable[[str], bool]:
-    """
-    Factory function that creates a filter for schematisms.
+def negate_op(op: Callable[[dict[str, Any]], bool]) -> Callable[[dict[str, Any]], bool]:
+    """Negate a filter operation.
 
     Args:
-        to_filter: Single schematism or list of schematisms to match
+        op: Filter function to negate.
 
     Returns:
-        Filter function that returns True if schematism matches
+        Negated filter function.
     """
 
-    def _filter_fn(schematism_name: str) -> bool:
-        if isinstance(to_filter, str):
-            return schematism_name == to_filter
-        return schematism_name in to_filter
+    def _f(x: dict[str, Any]) -> bool:
+        return not op(x)
 
-    return _filter_fn
+    return _f
 
 
-@OpRegistry.register(op_type="map", name="filter_empty")
-def filter_empty_samples(results: str | dict[str, list[Any]]) -> bool:
-    """
-    Filter out empty examples (i.e. with empty labels).
+def map_labels(classes_to_remove: set[str]) -> Callable:
+    """Create a map function that removes specified label classes.
 
     Args:
-        results: JSON string or dict containing entries
+        classes_to_remove: Set of class names to replace with 'O'.
 
     Returns:
-        True if entries exist, False otherwise
-
-    Example:
-        results = '{"page_number": null, "entries": []}'  # Returns False
-        results = '{"entries": [{"id": 1}]}'  # Returns True
+        Map function that modifies the 'labels' field.
     """
-    if isinstance(results, str):
-        try:
-            parsed: dict[str, Any] = json.loads(results)
-        except json.JSONDecodeError:
-            return False
-    else:
-        parsed = results
 
-    entries = parsed.get("entries", [])
-    return bool(entries)
+    def _map_fn(example):
+        example["labels"] = [
+            label if label not in classes_to_remove else "O"
+            for label in example["labels"]
+        ]
+        return example
 
-
-def get_op_registry() -> OpRegistry:
-    """Get the OpRegistry instance for use in Dagster resources."""
-    return OpRegistry()
+    return _map_fn

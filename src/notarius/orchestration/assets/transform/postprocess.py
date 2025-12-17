@@ -5,13 +5,13 @@ that perform cross-sample analysis and data completion tasks.
 """
 
 import random
-from typing import Optional
+from typing import Optional, Literal
 
 import dagster as dg
 from dagster import AssetExecutionContext, MetadataValue, AssetIn
 
 from notarius.domain.services.parser import Parser
-from notarius.domain.services.aligner import FlatHungarianAligner, JSONAligner
+from notarius.domain.services.aligner import JSONAligner, FlatHungarianAligner
 from notarius.orchestration.constants import (
     AssetLayer,
     ResourceGroup,
@@ -23,6 +23,8 @@ from notarius.schemas.data.pipeline import (
     PredictionDataItem,
     GroundTruthDataItem,
     GtAlignedPredictionDataItem,
+    # Concrete subclass for pickle compatibility
+    AlignedDataset,
 )
 from notarius.domain.entities.schematism import SchematismEntry, SchematismPage
 
@@ -30,7 +32,7 @@ from notarius.domain.entities.schematism import SchematismEntry, SchematismPage
 class DeaneryFillingConfig(dg.Config):
     """Configuration for deanery filling operation."""
 
-    pass
+    enabled: bool = True
 
 
 @dg.asset(
@@ -60,6 +62,9 @@ def pred__deanery_filled_dataset__pydantic(
     Returns:
         Updated dataset with filled deanery values
     """
+
+    if not config.enabled:
+        return dataset
 
     all_entries = []
 
@@ -114,6 +119,8 @@ def pred__deanery_filled_dataset__pydantic(
 
 class JSONAlignmentConfig(dg.Config):
     """Configuration for JSON alignment operation."""
+
+    aligner_type: Literal["greedy", "hungarian"] = "greedy"
     threshold: float = 0.5
     weights: dict[str, float] = {
         "deanery": 1.0,
@@ -126,7 +133,6 @@ class JSONAlignmentConfig(dg.Config):
 def asset_factory__gt_aligned_dataset__pydantic(
     asset_name: str, gt_dataset_asset: str, pred_dataset_asset: str
 ):
-
     @dg.asset(
         name=asset_name,
         key_prefix=[AssetLayer.FCT, DataSource.HUGGINGFACE],
@@ -185,20 +191,25 @@ def asset_factory__gt_aligned_dataset__pydantic(
                 )
                 continue
 
-            # Align the entries using the JSONAligner
-            aligner = JSONAligner(weights_mapping=config.weights, threshold=config.threshold)
-            aligned_gt_entries, aligned_pred_entries = aligner.align_entries(
-                {
-                    "entries": [
-                        entry.model_dump() for entry in gt_item.ground_truth.entries
-                    ]
-                },
-                {
-                    "entries": [
-                        entry.model_dump() for entry in parsed_item.predictions.entries
-                    ]
-                }
-            )
+            # Align the entries using the configured aligner
+            gt_entries = [entry.model_dump() for entry in gt_item.ground_truth.entries]
+            pred_entries = [entry.model_dump() for entry in parsed_item.predictions.entries]
+
+            if config.aligner_type == "hungarian":
+                aligner = FlatHungarianAligner(
+                    weights_mapping=config.weights, threshold=config.threshold
+                )
+                aligned_gt_entries, aligned_pred_entries = aligner.align_entries(
+                    gt_entries, pred_entries
+                )
+            else:
+                aligner = JSONAligner(
+                    weights_mapping=config.weights, threshold=config.threshold
+                )
+                aligned_gt_entries, aligned_pred_entries = aligner.align_entries(
+                    {"entries": gt_entries},
+                    {"entries": pred_entries},
+                )
 
             # Convert aligned entries back to SchematismEntry objects
             aligned_gt_page = SchematismPage(
@@ -242,6 +253,7 @@ def asset_factory__gt_aligned_dataset__pydantic(
                 "common_samples": MetadataValue.int(len(common_sample_ids)),
                 "aligned_items": MetadataValue.int(aligned_count),
                 "total_aligned_entries": MetadataValue.int(total_entries),
+                "aligner_type": MetadataValue.text(config.aligner_type),
                 "alignment_threshold": MetadataValue.float(config.threshold),
                 "random_sample": MetadataValue.json(
                     {
@@ -255,7 +267,8 @@ def asset_factory__gt_aligned_dataset__pydantic(
             }
         )
 
-        return BaseDataset[GtAlignedPredictionDataItem](items=aligned_items)
+        # Use concrete subclass for pickle compatibility
+        return AlignedDataset(items=aligned_items)
 
     return _asset__gt_aligned__dataset
 
@@ -268,14 +281,14 @@ gt__aligned_parsed_dataset__pydantic = asset_factory__gt_aligned_dataset__pydant
 gt__aligned_source_dataset__pydantic = asset_factory__gt_aligned_dataset__pydantic(
     asset_name="gt__aligned_source_dataset__pydantic",
     gt_dataset_asset="gt__source_dataset__pydantic",
-    pred_dataset_asset="pred__deanery_filled_dataset__pydantic",
+    pred_dataset_asset="pred__llm_enriched_dataset__pydantic",
 )
 
 
 class ParsingConfig(dg.Config):
     """Configuration for parsing operation."""
 
-    pass
+    enable: bool = True
 
 
 @dg.asset(
@@ -283,7 +296,7 @@ class ParsingConfig(dg.Config):
     group_name=ResourceGroup.DATA,
     kinds={Kinds.PYTHON, Kinds.PYDANTIC},
     ins={
-        "dataset": AssetIn(key="pred__deanery_filled_dataset__pydantic"),
+        "dataset": AssetIn(key="pred__llm_enriched_dataset__pydantic"),
     },
 )
 def pred__parsed_dataset__pydantic(
@@ -310,6 +323,9 @@ def pred__parsed_dataset__pydantic(
 
     parsed_count = 0
     total_items = 0
+
+    if not config.enable:
+        return dataset
 
     for item in dataset.items:
         if item.predictions is not None:

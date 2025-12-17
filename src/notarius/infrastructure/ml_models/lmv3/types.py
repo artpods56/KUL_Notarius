@@ -11,9 +11,10 @@ class EncodingData(TypedDict, total=False):
     This mirrors the structure of BatchEncoding from transformers,
     but provides better type hints for static analysis.
     """
+
     pixel_values: torch.Tensor  # Shape: (n_windows, 3, H, W)
-    bbox: torch.Tensor          # Shape: (n_windows, seq_len, 4)
-    input_ids: torch.Tensor     # Shape: (n_windows, seq_len)
+    bbox: torch.Tensor  # Shape: (n_windows, seq_len, 4)
+    input_ids: torch.Tensor  # Shape: (n_windows, seq_len)
     attention_mask: torch.Tensor  # Shape: (n_windows, seq_len)
     offset_mapping: torch.Tensor  # Shape: (n_windows, seq_len, 2)
     overflow_to_sample_mapping: torch.Tensor  # Shape: (n_windows,)

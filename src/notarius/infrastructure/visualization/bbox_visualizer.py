@@ -1,5 +1,4 @@
-from PIL import Image, ImageDraw, ImageFont
-import json
+from PIL import ImageDraw, ImageFont
 
 
 def unnormalize_bbox(bbox, image_width, image_height):

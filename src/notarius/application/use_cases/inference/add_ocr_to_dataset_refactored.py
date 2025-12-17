@@ -12,8 +12,8 @@ from structlog import get_logger
 from notarius.application.use_cases.base import BaseRequest, BaseResponse, BaseUseCase
 from notarius.infrastructure.ocr import OCREngine, OCRRequest, OCRMode
 from notarius.infrastructure.ocr.types import SimpleOCRResult
-from notarius.orchestration.resources import ImageStorageResource
-from notarius.schemas.data.pipeline import BaseDataset, BaseDataItem
+from notarius.orchestration.resources.base import ImageStorageResource
+from notarius.schemas.data.pipeline import BaseDataset, BaseDataItem, BaseItemDataset
 from notarius.shared.logger import Logger
 
 logger: Logger = get_logger(__name__)
@@ -83,7 +83,7 @@ class EnrichDatasetWithOCR(BaseUseCase[EnrichWithOCRRequest, EnrichWithOCRRespon
                 continue
 
             image = self.image_storage.load_image(item.image_path).convert("RGB")
-            logger.info(f"Processing {i+1}/{dataset_len} sample with OCR.")
+            logger.info(f"Processing {i + 1}/{dataset_len} sample with OCR.")
 
             # Just call the engine - caching happens transparently
             ocr_request = OCRRequest(input=image, mode=request.mode)
@@ -105,6 +105,6 @@ class EnrichDatasetWithOCR(BaseUseCase[EnrichWithOCRRequest, EnrichWithOCRRespon
         )
 
         return EnrichWithOCRResponse(
-            dataset=BaseDataset[BaseDataItem](items=new_dataset_items),
+            dataset=BaseItemDataset(items=new_dataset_items),
             processed_count=processed_count,
         )

@@ -9,6 +9,11 @@ class Conversation:
     """Immutable input history using domain message types."""
 
     messages: ChatMessageList = field(default_factory=tuple)
+    max_history_length: int | None = None
+
+    def truncate_history(self, message_count: int) -> "Conversation":
+        """Truncate history to the specified number of messages."""
+        raise NotImplementedError
 
     def add(self, message: ChatMessage) -> "Conversation":
         """Add a single message to the input."""

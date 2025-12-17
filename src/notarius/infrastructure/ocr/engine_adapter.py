@@ -7,7 +7,7 @@ import numpy as np
 from PIL.Image import Image
 from pytesseract import pytesseract
 
-from notarius.application.ports.outbound.engine import ConfigurableEngine
+from notarius.application.ports.outbound.engine import ConfigurableEngine, track_stats
 from notarius.domain.protocols import BaseRequest, BaseResponse
 from notarius.infrastructure.ocr.types import (
     PytesseractOCRResultDict,
@@ -18,7 +18,8 @@ from notarius.infrastructure.ocr.types import (
 from notarius.schemas.configs import PytesseractOCRConfig
 from notarius.schemas.data.structs import BBox
 
-OCRMode = Literal["text","structured"]
+OCRMode = Literal["text", "structured"]
+
 
 @dataclass(frozen=True)
 class OCRRequest(BaseRequest):
@@ -74,6 +75,7 @@ class OCREngine(ConfigurableEngine[PytesseractOCRConfig, OCRRequest, OCRResponse
             config: PyTesseract configuration
             enable_cache: Optional flag to enable caching (currently unused)
         """
+        self._init_stats()
         self.config = config
 
     @classmethod
@@ -113,14 +115,17 @@ class OCREngine(ConfigurableEngine[PytesseractOCRConfig, OCRRequest, OCRResponse
             pil_image: Input PIL Image
 
         Returns:
-            Dictionary containing OCR results with word-level information
+            Dictionary containing OCR sample with word-level information
         """
-        result = cast(PytesseractOCRResultDict,pytesseract.image_to_data(
-            pil_image,
-            output_type=pytesseract.Output.DICT,
-            lang=self.config.language,
-            config=self.config.tesseract_config,
-        ))
+        result = cast(
+            PytesseractOCRResultDict,
+            pytesseract.image_to_data(
+                pil_image,
+                output_type=pytesseract.Output.DICT,
+                lang=self.config.language,
+                config=self.config.tesseract_config,
+            ),
+        )
         return result
 
     def structured_to_words_ands_bboxes(
@@ -169,6 +174,7 @@ class OCREngine(ConfigurableEngine[PytesseractOCRConfig, OCRRequest, OCRResponse
         return words, bboxes
 
     @override
+    @track_stats
     def process(self, request: OCRRequest) -> OCRResponse:
         """Process an image and extract words with bounding boxes.
 
@@ -207,7 +213,9 @@ class OCREngine(ConfigurableEngine[PytesseractOCRConfig, OCRRequest, OCRResponse
         ...
 
     @overload
-    def predict(self, image: Image, text_only: Literal[False]) -> PytesseractOCRResultDict:
+    def predict(
+        self, image: Image, text_only: Literal[False]
+    ) -> PytesseractOCRResultDict:
         """Perform OCR on image and return structured data."""
         ...
 

@@ -31,7 +31,7 @@ class LLMCacheItem(BaseCacheItem[LLMContent]):
 
 # OCR Cache Content Models
 class PyTesseractContent(BaseModel):
-    """Content model for PyTesseract OCR results."""
+    """Content model for PyTesseract OCR sample."""
 
     text: str
     bbox: list[BBox] | None

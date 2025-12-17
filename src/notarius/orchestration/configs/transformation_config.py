@@ -1,4 +1,3 @@
-from notarius.orchestration.assets.transform.preprocess import OpConfig
 from notarius.orchestration.assets.transform.transform import (
     PandasDataFrameConfig,
 )
@@ -13,21 +12,7 @@ Resolves to: int__huggingface__filtered__hf__dataset
 FILTERED__HF__DATASET_OP_CONFIG = {
     AssetKeyHelper.build_prefixed_key(
         AssetLayer.INT, DataSource.HUGGINGFACE, "filtered", "hf", "dataset"
-    ): {
-        "config": OpConfig(
-            op_type="filter",
-            op_name="filter_schematisms",
-            input_columns=["schematism_name"],
-            kwargs={
-                "to_filter": [
-                    "wloclawek_1872",
-                    "wloclawek_1873",
-                    "tarnow_1870",
-                    "chelmno_1871",
-                ]
-            },
-        ).model_dump()
-    }
+    ): {"config": {}}
 }
 
 #

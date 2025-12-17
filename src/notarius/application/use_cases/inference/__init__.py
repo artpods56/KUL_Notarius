@@ -15,6 +15,16 @@ from notarius.application.use_cases.inference.add_llm_preds_to_dataset import (
     PredictWithLLMRequest,
     PredictWithLLMResponse,
 )
+from notarius.application.use_cases.inference.add_llm_ocr_to_dataset import (
+    EnrichDatasetWithLLMOCR,
+    EnrichWithLLMOCRRequest,
+    EnrichWithLLMOCRResponse,
+)
+from notarius.application.use_cases.inference.generate_source_dataset import (
+    GenerateSourceDataset,
+    GenerateSourceDatasetRequest,
+    GenerateSourceDatasetResponse,
+)
 
 __all__ = [
     "EnrichDatasetWithOCR",
@@ -26,4 +36,10 @@ __all__ = [
     "PredictDatasetWithLLM",
     "PredictWithLLMRequest",
     "PredictWithLLMResponse",
+    "EnrichDatasetWithLLMOCR",
+    "EnrichWithLLMOCRRequest",
+    "EnrichWithLLMOCRResponse",
+    "GenerateSourceDataset",
+    "GenerateSourceDatasetRequest",
+    "GenerateSourceDatasetResponse",
 ]

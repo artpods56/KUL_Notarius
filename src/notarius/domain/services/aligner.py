@@ -12,7 +12,10 @@ class FlatHungarianAligner:
         self.weights_mapping = weights_mapping
         self.threshold = threshold
 
-    def _similarity(self, val1: str, val2: str) -> float:
+    def _similarity(self, val1: str | None, val2: str | None) -> float:
+        # Handle None values
+        val1 = val1 or ""
+        val2 = val2 or ""
         if val1 == val2:
             return 1.0
         return SequenceMatcher(None, val1, val2).ratio()

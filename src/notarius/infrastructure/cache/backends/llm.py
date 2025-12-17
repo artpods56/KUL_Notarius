@@ -20,7 +20,7 @@ from notarius.infrastructure.llm.engine_adapter import (
 )
 from notarius.shared.logger import Logger
 
-logger = cast(Logger,get_logger(__name__))
+logger = cast(Logger, get_logger(__name__))
 
 
 @final

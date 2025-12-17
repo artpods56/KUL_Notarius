@@ -22,7 +22,7 @@ class OCRCacheKeyParams(TypedDict, total=False):
 
 @final
 class PyTesseractCache(BaseCache[OCRResponse]):
-    """Type-safe cache for PyTesseract OCR results using pickle serialization.
+    """Type-safe cache for PyTesseract OCR sample using pickle serialization.
 
     Pickle automatically handles the Pydantic models:
     - PyTesseractCacheItem

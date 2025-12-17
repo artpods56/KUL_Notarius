@@ -1,8 +1,7 @@
-from typing import TypedDict
+from typing import TypedDict, NotRequired
 
 from PIL.Image import Image
 from pydantic import BaseModel, Field
-from torch import Type
 
 
 class ETLSpecificDatasetFields(BaseModel):
@@ -40,11 +39,31 @@ SchematismPage = TypedDict(
 SchematismsDatasetItem = TypedDict(
     "SchematismsDatasetItem",
     {
-        "sample_id": int,
+        "sample_id": NotRequired[int],
         "image": Image,
         "source": SchematismPage,
         "parsed": SchematismPage,
         "schematism_name": str,
         "filename": str,
+    },
+)
+
+SourceDatasetGenerationItem = TypedDict(
+    "SourceDatasetGenerationItem",
+    {
+        "sample_id": int,
+        "filename": str,
+        "schematism_name": str,
+        "source": SchematismPage,
+    },
+)
+
+SourceDatasetGenerationResult = TypedDict(
+    "SourceDatasetGenerationResult",
+    {
+        "schematism_name": str,
+        "generated_at": str,
+        "total_records": int,
+        "records": list[SourceDatasetGenerationItem],
     },
 )

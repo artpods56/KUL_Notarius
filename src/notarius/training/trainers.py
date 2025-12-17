@@ -2,7 +2,7 @@
 Custom trainer implementations.
 """
 
-from typing import Any, Optional, final, Union, override
+from typing import Optional, final, override
 
 import torch
 from torch import nn

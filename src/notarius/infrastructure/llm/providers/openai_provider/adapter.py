@@ -71,11 +71,12 @@ class OpenAICompatibleProvider(LLMProvider[OpenAI]):
                     model=self.config.model,
                     input=openai_messages,
                     text_format=text_format,
+                    temperature=self.config.params.temperature,
+                    top_p=self.config.params.top_p,
                 )
 
                 return OpenAIResponse[ResponseT](
-                    structured_response=response.output_parsed,
-                    text_response=None
+                    structured_response=response.output_parsed, text_response=None
                 )
             else:
                 response = self.client.responses.create(

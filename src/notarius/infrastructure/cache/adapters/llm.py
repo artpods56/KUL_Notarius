@@ -12,7 +12,7 @@ from notarius.infrastructure.llm.engine_adapter import CompletionResult
 from notarius.infrastructure.llm.utils import parse_model_name
 from notarius.shared.logger import Logger
 
-logger = cast(Logger,get_logger(__name__))
+logger = cast(Logger, get_logger(__name__))
 
 
 @final

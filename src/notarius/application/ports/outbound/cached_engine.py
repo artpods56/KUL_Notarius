@@ -5,16 +5,26 @@ ConfigurableEngine, moving caching logic out of use cases and into the
 infrastructure layer where it belongs.
 """
 
-from typing import Never, Protocol, final, runtime_checkable, Any, cast, override
+from typing import (
+    Never,
+    Protocol,
+    final,
+    runtime_checkable,
+    Any,
+    override,
+)
 
 from pydantic import BaseModel
-from structlog import get_logger
 
-from notarius.application.ports.outbound.engine import ConfigurableEngine
+from notarius.application.ports.outbound.engine import (
+    ConfigurableEngine,
+    CachedEngineStats,
+    _create_cached_stats,
+)
 from notarius.domain.protocols import BaseRequest, BaseResponse
-from notarius.shared.logger import Logger
+from notarius.shared.logger import get_logger
 
-logger = cast(Logger, get_logger(__name__))
+logger = get_logger(__name__)
 
 
 @runtime_checkable
@@ -49,16 +59,16 @@ class CachedEngine[
     Decorator that adds caching capabilities to any ConfigurableEngine.
 
     This wrapper intercepts the process() method, checks cache before
-    delegating to the wrapped engine, and caches the results.
+    delegating to the wrapped engine, and caches the sample.
 
     Example:
         ```python
         # Create the base engine
-        llm_engine = LLMEngine.from_config(config)
+        llm_engine_resource = LLMEngine.from_config(config)
 
         # Wrap it with caching
         cached_engine = CachedEngine(
-            engine=llm_engine,
+            engine=llm_engine_resource,
             cache_backend=llm_cache,
             key_generator=llm_key_generator,
             enabled=True
@@ -89,7 +99,7 @@ class CachedEngine[
         self._cache = cache_backend
         self._key_generator = key_generator
         self._enabled = enabled
-        self._stats = {"hits": 0, "misses": 0, "errors": 0}
+        self._stats: CachedEngineStats = _create_cached_stats()
 
     @classmethod
     @override
@@ -106,7 +116,7 @@ class CachedEngine[
         Process request with caching.
 
         Checks cache first, delegates to wrapped engine on miss,
-        and stores results in cache.
+        and stores sample in cache.
         """
         if not self._enabled:
             return self._engine.process(request)
@@ -155,15 +165,21 @@ class CachedEngine[
             return self._engine.process(request)
 
     @property
-    def stats(self) -> dict[str, int]:
+    @override
+    def stats(self) -> CachedEngineStats:
         """Get cache statistics."""
-        return self._stats.copy()
+        self._stats["calls"] = self._stats["hits"] + self._stats["misses"]
+        return CachedEngineStats(**self._stats)
 
     @property
     def wrapped_engine(self) -> ConfigurableEngine[ConfigT, RequestT, ResponseT]:
         """Access the underlying engine."""
         return self._engine
 
+    @override
     def clear_stats(self) -> None:
         """Reset cache statistics."""
-        self._stats = {"hits": 0, "misses": 0, "errors": 0}
+        # CachedEngineStats is a superset of EngineStats (has all its fields plus hits/misses)
+        self._stats = (
+            _create_cached_stats()
+        )  # pyright: ignore[reportIncompatibleVariableOverride]

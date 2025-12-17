@@ -17,7 +17,6 @@ from notarius.orchestration.configs.exporting_config import (
     EVAL__WANDB_EXPORT_DATAFRAME__PANDAS,
 )
 from notarius.orchestration.configs.postprocessing_config import (
-    PRED__DEANERY_FILLED_DATASET__PYDANTIC__OP_CONFIG,
     PRED__PARSED_DATASET__PYDANTIC__OP_CONFIG,
     GT__ALIGNED_SOURCE_DATASET__PYDANTIC__OP_CONFIG,
     GT__ALIGNED_PARSED_DATASET__PYDANTIC__OP_CONFIG,
@@ -26,6 +25,7 @@ from notarius.orchestration.configs.prediction_config import (
     PRED__OCR_ENRICHED_DATASET__PYDANTIC__OP_CONFIG,
     PRED__LMV3_ENRICHED_DATASET__PYDANTIC__OP_CONFIG,
     PRED__LLM_ENRICHED_DATASET__PYDANTIC__OP_CONFIG,
+    PRED__LLM_OCR_ENRICHED_DATASET__PYDANTIC__OP_CONFIG,
 )
 
 from notarius.orchestration.configs.transformation_config import (
@@ -66,8 +66,8 @@ complete_pipeline_job = dg.define_asset_job(
             **PRED__OCR_ENRICHED_DATASET__PYDANTIC__OP_CONFIG,
             **PRED__LMV3_ENRICHED_DATASET__PYDANTIC__OP_CONFIG,
             **PRED__LLM_ENRICHED_DATASET__PYDANTIC__OP_CONFIG,
+            **PRED__LLM_OCR_ENRICHED_DATASET__PYDANTIC__OP_CONFIG,
             # Postprocessing configs
-            **PRED__DEANERY_FILLED_DATASET__PYDANTIC__OP_CONFIG,
             **PRED__PARSED_DATASET__PYDANTIC__OP_CONFIG,
             **GT__ALIGNED_SOURCE_DATASET__PYDANTIC__OP_CONFIG,
             **GT__ALIGNED_PARSED_DATASET__PYDANTIC__OP_CONFIG,

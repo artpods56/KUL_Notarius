@@ -37,8 +37,10 @@ class StructuredOCRResult:
     words: list[str]
     bboxes: list[BBox]
 
+
 @dataclass(frozen=True)
 class SimpleOCRResult:
     text: str
+
 
 OCRResult = StructuredOCRResult | SimpleOCRResult

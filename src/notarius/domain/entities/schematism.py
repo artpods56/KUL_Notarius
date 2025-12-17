@@ -1,4 +1,3 @@
-from typing import List
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -23,6 +22,25 @@ class SchematismEntry(BaseModel):
     )
 
 
+class PageContext(BaseModel):
+    """Context state to carry forward between pages."""
+
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+
+    summary: str | None = Field(default=None, description="Short summary of the page")
+
+    active_deanery: str | None = Field(
+        default=None,
+        description="The deanery that is active at the end of this page",
+    )
+    last_page_number: str | None = Field(
+        default=None,
+        description="This page's page number for validation",
+    )
+
+
 class SchematismPage(BaseModel):
     """Model for page data containing parish entries."""
 
@@ -32,5 +50,9 @@ class SchematismPage(BaseModel):
 
     page_number: str | None = Field(None, description="Page number as string")
     entries: list[SchematismEntry] = Field(
-        list(), description="List of parish entries on this page"
+        default_factory=list, description="List of parish entries on this page"
+    )
+    context: PageContext | None = Field(
+        default=None,
+        description="Context state to pass to the next page for multi-page processing",
     )

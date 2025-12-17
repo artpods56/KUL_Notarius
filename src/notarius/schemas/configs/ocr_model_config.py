@@ -12,9 +12,7 @@ class PytesseractOCRConfig(BaseModel):
         default="lat+pol+rus",
         description="Languages passed to Tesseract (e.g. 'eng+deu', 'lat+pol+rus')",
     )
-    enable_cache: bool = Field(
-        default=True, description="Enable caching of OCR results"
-    )
+    enable_cache: bool = Field(default=True, description="Enable caching of OCR sample")
     psm_mode: int = Field(
         default=6, description="Page segmentation mode for Tesseract (--psm parameter)"
     )

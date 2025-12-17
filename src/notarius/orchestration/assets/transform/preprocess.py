@@ -1,86 +1,65 @@
-import random
-from typing import Literal, Any
+from typing import Callable
 
 import dagster as dg
-from dagster import AssetIn, AssetExecutionContext, MetadataValue
 from datasets import Dataset
+from pydantic import Field
 
-from notarius.orchestration.operations import negate_op
 from notarius.orchestration.constants import (
     AssetLayer,
     DataSource,
     ResourceGroup,
     Kinds,
 )
-from notarius.orchestration.resources import OpRegistry
+from notarius.schemas.data.dataset import SchematismPage
 
 
-class OpConfig(dg.Config):
-    op_type: Literal["map", "filter"]
-    op_name: str
-    input_columns: list[str]
-    negate: bool = False
-    kwargs: dict[str, Any] = {}
+def filter_by_schematism(to_filter: str | list[str]) -> Callable[[str], bool]:
+    targets = {to_filter} if isinstance(to_filter, str) else set(to_filter)
+    return lambda name: name in targets
+
+
+def filter_empty_entries(sample: SchematismPage) -> bool:
+    return bool(sample.get("entries", []))
+
+
+class PreprocessingConfig(dg.Config):
+    """Configuration for filtering by schematism names."""
+
+    filtered_schematisms: list[str] = Field(
+        default=[], description="Filter by schematism names."
+    )
+
+    filtered_empty_pages: str | None = Field(
+        default=None,
+        description="Filter samples without entries from either source or parsed.",
+    )
+    filtered_empty_pages_field: str = Field(
+        default="parsed",
+        description="Column name with schematisms to use for filtering. Choices: 'source', 'parsed'.",
+    )
 
 
 @dg.asset(
     key_prefix=[AssetLayer.INT, DataSource.HUGGINGFACE],
     group_name=ResourceGroup.DATA,
     kinds={Kinds.PYTHON, Kinds.HUGGINGFACE},
-    ins={"dataset": AssetIn(key="raw__hf__dataset")},
+    ins={"dataset": dg.AssetIn(key="raw__hf__dataset")},
 )
-def filtered__hf__dataset(
-    context: AssetExecutionContext,
+def preprocessed__hf__dataset(
+    context: dg.AssetExecutionContext,
     dataset: Dataset,
-    config: OpConfig,
-    op_registry: OpRegistry,
-):
-    if config.op_type == "map" and config.negate:
-        raise NotImplementedError("Negated map operations not implemented.")
+    config: PreprocessingConfig,
+) -> Dataset:
 
-    op_func = op_registry.get_op(op_type=config.op_type, name=config.op_name)
-
-    if op_func is None:
-        raise RuntimeError(f"No op registered for {config.op_type, config.op_name}")
-
-    op = op_func(**config.kwargs)
-
-    if config.op_type == "filter":
-        filtered_dataset = dataset.filter(
-            op if not config.negate else negate_op(op),
-            input_columns=config.input_columns,
+    if config.filtered_schematisms:
+        dataset = dataset.filter(
+            filter_by_schematism(config.filtered_schematisms),
+            input_columns=["schematism_name"],
         )
-    elif config.op_type == "map":
-        filtered_dataset = dataset.map(op, input_columns=config.input_columns)
-    else:
-        raise RuntimeError(f"Unknown op_type {config.op_type}")
 
-    context.add_asset_metadata(
-        {
-            "op_type": MetadataValue.text(config.op_type),
-            "op_name": MetadataValue.text(config.op_name),
-            "input_columns": MetadataValue.json(config.input_columns),
-            "negate": MetadataValue.bool(config.negate),
-            "op_kwargs": MetadataValue.json(config.kwargs),
-        }
-    )
+    if config.filtered_empty_pages:
+        dataset = dataset.filter(
+            filter_empty_entries, input_columns=config.filtered_empty_pages_field
+        )
 
-    no_image_dataset = filtered_dataset.remove_columns("image")
-
-    context.add_output_metadata(
-        {
-            "num_rows": MetadataValue.int(len(filtered_dataset)),
-            "num_columns": MetadataValue.int(len(filtered_dataset.column_names)),
-            "column_names": MetadataValue.json(filtered_dataset.column_names),
-            "random_sample": MetadataValue.json(
-                {
-                    k: v
-                    for k, v in no_image_dataset[
-                        random.randrange(0, len(filtered_dataset))
-                    ].items()
-                }
-            ),
-        }
-    )
-
-    return filtered_dataset
+    return dataset

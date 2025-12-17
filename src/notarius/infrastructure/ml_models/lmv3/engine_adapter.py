@@ -12,7 +12,7 @@ from transformers import (
 
 from notarius.domain.entities.schematism import SchematismPage
 from notarius.domain.protocols import BaseRequest, BaseResponse
-from notarius.application.ports.outbound.engine import ConfigurableEngine
+from notarius.application.ports.outbound.engine import ConfigurableEngine, track_stats
 from notarius.infrastructure.ocr import StructuredOCRResult
 from notarius.infrastructure.ocr.engine_adapter import OCREngine, OCRRequest
 from notarius.schemas.configs import BaseLMv3ModelConfig
@@ -49,6 +49,7 @@ class LMv3Engine(ConfigurableEngine[BaseLMv3ModelConfig, LMv3Request, LMv3Respon
     """LayoutLMv3 model wrapper with unified predict interface and caching."""
 
     def __init__(self, config: BaseLMv3ModelConfig, ocr_engine: OCREngine):
+        self._init_stats()
         self.config = config
         self.processor = LayoutLMv3Processor.from_pretrained(
             config.processor.checkpoint,
@@ -64,7 +65,9 @@ class LMv3Engine(ConfigurableEngine[BaseLMv3ModelConfig, LMv3Request, LMv3Respon
 
     @classmethod
     @override
-    def from_config(cls, config: BaseLMv3ModelConfig, ocr_engine: OCREngine) -> "LMv3Engine":
+    def from_config(
+        cls, config: BaseLMv3ModelConfig, ocr_engine: OCREngine
+    ) -> "LMv3Engine":
         return cls(config=config, ocr_engine=ocr_engine)
 
     @property
@@ -83,7 +86,9 @@ class LMv3Engine(ConfigurableEngine[BaseLMv3ModelConfig, LMv3Request, LMv3Respon
 
     def _inference(
         self,
-        image: Image, words:list[str] | None, boxes: list[BBox] | None,
+        image: Image,
+        words: list[str] | None,
+        boxes: list[BBox] | None,
     ) -> tuple[list[BBox], list[int], list[str]]:
         """Retrieve predictions for a single image.
 
@@ -152,7 +157,9 @@ class LMv3Engine(ConfigurableEngine[BaseLMv3ModelConfig, LMv3Request, LMv3Respon
         if isinstance(token_boxes_raw, list) and len(token_boxes_raw) == 512:
             # Single window case - wrap both in lists to match expected format
             predictions: list[list[int]] = [cast(list[int], predictions_raw)]
-            token_boxes: list[list[list[int]]] = [cast(list[list[int]], token_boxes_raw)]
+            token_boxes: list[list[list[int]]] = [
+                cast(list[list[int]], token_boxes_raw)
+            ]
         else:
             # Multiple windows case
             predictions = cast(list[list[int]], predictions_raw)
@@ -171,6 +178,7 @@ class LMv3Engine(ConfigurableEngine[BaseLMv3ModelConfig, LMv3Request, LMv3Respon
         return bboxes, preds, flattened_words
 
     @override
+    @track_stats
     def process(self, request: LMv3Request) -> LMv3Response:
         """Process an image and return structured predictions.
 
@@ -184,14 +192,11 @@ class LMv3Engine(ConfigurableEngine[BaseLMv3ModelConfig, LMv3Request, LMv3Respon
         ocr_request = OCRRequest(input=request.input, mode="structured")
         ocr_response_output = self.ocr_engine.process(ocr_request).output
 
-
         words = None
         bboxes = None
         if isinstance(ocr_response_output, StructuredOCRResult):
             words = ocr_response_output.words
             bboxes = ocr_response_output.bboxes
-
-
 
         bboxes, preds, words = self._inference(
             image=request.input,

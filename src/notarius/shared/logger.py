@@ -1,6 +1,8 @@
 import logging
 import sys
-from typing import TYPE_CHECKING, Any
+from typing import Any, cast
+from structlog.stdlib import BoundLogger
+
 
 import structlog
 
@@ -60,7 +62,10 @@ def setup_logging() -> None:
 
 # proxy type to the structlog bound logger that satisfies beartype
 type Logger = Any
-if TYPE_CHECKING:
-    from structlog.stdlib import BoundLogger
 
-    type Logger = BoundLogger
+
+def get_logger(args: Any) -> BoundLogger:
+    return cast(
+        BoundLogger,
+        structlog.get_logger(args),
+    )

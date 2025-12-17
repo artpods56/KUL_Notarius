@@ -1,0 +1,54 @@
+<PROMPT_VERSION>0.0.1</PROMPT_VERSION>
+<USER_REQUEST>
+    <INSTRUCTION>
+        Analyze this ecclesiastical schematism page image and extract the structured information according to the system instructions.
+    </INSTRUCTION>
+
+    {% if previous_context %}
+    <PREVIOUS_PAGE_CONTEXT>
+        This page continues from a previous page. Use the following context:
+        {% if previous_context.active_deanery %}
+        <ACTIVE_DEANERY>{{ previous_context.active_deanery }}</ACTIVE_DEANERY>
+        {% else %}
+        <ACTIVE_DEANERY>null (no deanery was active at end of previous page)</ACTIVE_DEANERY>
+        {% endif %}
+        {% if previous_context.last_page_number %}
+        <LAST_PAGE_NUMBER>{{ previous_context.last_page_number }}</LAST_PAGE_NUMBER>
+        {% endif %}
+
+        Apply the active deanery to any parishes appearing BEFORE a new deanery heading on this page.
+    </PREVIOUS_PAGE_CONTEXT>
+    {% else %}
+    <PREVIOUS_PAGE_CONTEXT>
+        This is the first page or no context is available. Set `deanery` to null for any parishes
+        appearing before a visible deanery heading on this page.
+    </PREVIOUS_PAGE_CONTEXT>
+    {% endif %}
+
+    {% if hints %}
+    <MODEL_HINTS source="layoutlmv3">
+        {{ hints }}
+    </MODEL_HINTS>
+    {% else %}
+    <MODEL_HINTS>
+        No model hints provided. Use your own analysis of the page scan.
+    </MODEL_HINTS>
+    {% endif %}
+
+    {% if ocr_text %}
+    <OCR_TEXT>
+        {{ ocr_text }}
+    </OCR_TEXT>
+    {% endif %}
+
+    <EXTRACTION_FOCUS>
+        - Page number (as printed on the scan)
+        - Deanery information (use previous context if no heading visible before parishes)
+        - Parish entries with their dedications and building materials
+        - Context state to pass to the next page
+    </EXTRACTION_FOCUS>
+
+    <RESPONSE_FORMAT>
+        Return only the JSON object as specified in OUTPUT_SCHEMA. No additional text or markdown.
+    </RESPONSE_FORMAT>
+</USER_REQUEST>

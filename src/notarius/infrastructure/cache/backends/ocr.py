@@ -46,8 +46,8 @@ class OCRCacheBackend(CacheBackend[OCRResponse]):
     using pickle serialization for automatic handling of OCR structured_response types.
 
     The cache stores complete OCRResponse objects including:
-    - Simple text-only results
-    - Structured results with words and bounding boxes
+    - Simple text-only sample
+    - Structured sample with words and bounding boxes
     """
 
     def __init__(self, cache: PyTesseractCache, key_generator: OCRCacheKeyGenerator):

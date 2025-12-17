@@ -20,7 +20,7 @@ Usage:
     # Create cached engine
     from notarius.infrastructure.cache.backends import create_cached_llm_engine
     cached_engine = create_cached_llm_engine(
-        llm_engine=my_engine,
+        llm_engine_resource=my_engine,
         llm_cache=llm_cache,
         enabled=True
     )

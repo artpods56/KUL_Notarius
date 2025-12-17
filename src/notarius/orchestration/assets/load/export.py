@@ -4,18 +4,24 @@ from typing import Mapping
 
 import dagster as dg
 import pandas as pd
-import wandb
 from PIL import Image
-from dagster import AssetExecutionContext, AssetIn
+from dagster import AssetExecutionContext, AssetIn, MetadataValue
 from rapidfuzz import fuzz
 
+from notarius.application.use_cases.export import (
+    ExportDataFrameToWandB,
+    WandBExportRequest,
+)
+from notarius.application.use_cases.export.wandb_dataframe_export import (
+    DataFrameExportConfig,
+)
 from notarius.orchestration.constants import (
     AssetLayer,
     DataSource,
     ResourceGroup,
     Kinds,
 )
-from notarius.orchestration.resources import (
+from notarius.orchestration.resources.base import (
     ExcelWriterResource,
     WandBRunResource,
     ImageStorageResource,
@@ -142,7 +148,8 @@ eval__excel_export_source_dataframe__pandas = (
 
 
 class WandBDataFrameExport(dg.Config):
-    table_name: str = "eval_aligned_dataframe"
+    parsed_table_name: str = "eval_parsed_dataframe"
+    source_table_name: str = "eval_source_dataframe"
     group_by_key: str | None = None
     include_images: bool = True
     sample_id_column: str = "sample_id"
@@ -153,21 +160,23 @@ class WandBDataFrameExport(dg.Config):
     group_name=ResourceGroup.DATA,
     kinds={Kinds.PYTHON, Kinds.WANDB},
     ins={
-        "dataframe": AssetIn(key="eval__aligned_parsed_dataframe__pandas"),
+        "parsed_dataframe": AssetIn(key="eval__aligned_parsed_dataframe__pandas"),
+        "source_dataframe": AssetIn(key="eval__aligned_source_dataframe__pandas"),
         "pydantic_dataset": AssetIn(key="base__dataset__pydantic"),
     },
 )
-def eval__wandb_export_dataframe__pandas(
+async def eval__wandb_export_dataframe__pandas(
     context: AssetExecutionContext,
-    dataframe: pd.DataFrame,
+    parsed_dataframe: pd.DataFrame,
+    source_dataframe: pd.DataFrame,
     pydantic_dataset: BaseDataset[BaseDataItem],
     config: WandBDataFrameExport,
     wandb_run: WandBRunResource,
     image_storage: ImageStorageResource,
 ):
-    """Export dataframe to Weights & Biases as a table."""
+    """Export parsed and source dataframes to Weights & Biases as tables."""
 
-    def _build_sample_id2mapping(
+    def _build_sample_id_to_image(
         dataset: BaseDataset[BaseDataItem],
     ) -> dict[str, Image.Image]:
         mapping = {}
@@ -176,65 +185,48 @@ def eval__wandb_export_dataframe__pandas(
                 mapping[item.metadata.sample_id] = image_storage.load_image(
                     item.image_path
                 )
-
         return mapping
 
     run = wandb_run.get_wandb_run()
 
-    sample_id2image_mapping: dict[str, Image.Image] = _build_sample_id2mapping(
-        pydantic_dataset
+    # Build image mapping
+    sample_id_to_image = _build_sample_id_to_image(pydantic_dataset)
+
+    # Create use case
+    use_case = ExportDataFrameToWandB(wandb_run=run)
+
+    # Configure exports for both dataframes
+    request = WandBExportRequest(
+        exports=[
+            DataFrameExportConfig(
+                dataframe=parsed_dataframe,
+                table_name=config.parsed_table_name,
+                group_by_key=config.group_by_key,
+                include_images=config.include_images,
+                sample_id_column=config.sample_id_column,
+            ),
+            DataFrameExportConfig(
+                dataframe=source_dataframe,
+                table_name=config.source_table_name,
+                group_by_key=config.group_by_key,
+                include_images=config.include_images,
+                sample_id_column=config.sample_id_column,
+            ),
+        ],
+        sample_id_to_image=sample_id_to_image,
     )
 
-    if config.group_by_key:
-        # Log each group as a separate table
-        for key, group in dataframe.groupby(config.group_by_key):
-            if config.include_images:
-                columns = ["image"] + list(group.columns)
-                data = []
+    # Execute use case
+    response = await use_case.execute(request)
 
-                for sample_id, grouped_samples in group.groupby(
-                    config.sample_id_column
-                ):
-                    # Get image for this sample_id
-                    pil_image = sample_id2image_mapping[sample_id]
-                    wandb_image = wandb.Image(pil_image.resize((400, 600)))
+    # Add metadata
+    context.add_output_metadata(
+        {
+            "tables_logged": MetadataValue.json(response.tables_logged),
+            "total_rows": MetadataValue.int(response.total_rows),
+        }
+    )
 
-                    # Add image only to the first row, None for the rest
-                    for i, (idx, row) in enumerate(grouped_samples.iterrows()):
-                        if i == 0:
-                            data.append([wandb_image] + row.tolist())
-                        else:
-                            data.append([None] + row.tolist())
-            else:
-                columns = list(group.columns)
-                data = group.values.tolist()
-
-            table = wandb.Table(columns=columns, data=data)
-            run.log({f"{config.table_name}_{key}": table})
-            context.log.info(f"Logged table for group '{key}' to W&B")
-    else:
-        # Log the entire dataframe as one table
-        if config.include_images:
-            columns = ["image"] + list(dataframe.columns)
-            data = []
-
-            for sample_id, grouped_samples in dataframe.groupby(
-                config.sample_id_column
-            ):
-                # Get image for this sample_id
-                pil_image = sample_id2image_mapping[sample_id]
-                wandb_image = wandb.Image(pil_image.resize((400, 600)))
-
-                # Add image only to the first row, None for the rest
-                for i, (idx, row) in enumerate(grouped_samples.iterrows()):
-                    if i == 0:
-                        data.append([wandb_image] + row.tolist())
-                    else:
-                        data.append([None] + row.tolist())
-        else:
-            columns = list(dataframe.columns)
-            data = dataframe.values.tolist()
-
-        table = wandb.Table(columns=columns, data=data)
-        run.log({config.table_name: table})
-        context.log.info(f"Logged table '{config.table_name}' to W&B")
+    context.log.info(
+        f"Logged {len(response.tables_logged)} tables to W&B with {response.total_rows} total rows"
+    )

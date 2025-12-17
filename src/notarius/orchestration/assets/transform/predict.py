@@ -1,9 +1,7 @@
 import random
-from typing import Any
 
 import dagster as dg
 from dagster import AssetIn, AssetExecutionContext, MetadataValue
-from pydantic import BaseModel
 
 from notarius.application.use_cases.inference.add_llm_preds_to_dataset import (
     PredictDatasetWithLLM,
@@ -16,7 +14,7 @@ from notarius.orchestration.constants import (
     DataSource,
     Kinds,
 )
-from notarius.orchestration.resources import (
+from notarius.orchestration.resources.base import (
     ImageStorageResource,
     OCREngineResource,
     LMv3EngineResource,
@@ -24,7 +22,6 @@ from notarius.orchestration.resources import (
 )
 from notarius.schemas.data.pipeline import (
     BaseDataset,
-    PredictionDataItem,
     BaseDataItem,
 )
 from notarius.application.use_cases.inference.add_ocr_to_dataset import (
@@ -35,6 +32,11 @@ from notarius.application.use_cases.inference.add_lmv3_preds_to_dataset import (
     EnrichDatasetWithLMv3,
     EnrichWithLMv3Request,
 )
+from notarius.application.use_cases.inference.add_llm_ocr_to_dataset import (
+    EnrichDatasetWithLLMOCR,
+    EnrichWithLLMOCRRequest,
+)
+from notarius.infrastructure.llm.engine_adapter import LLMEngine
 
 
 class OcrConfig(dg.Config):
@@ -164,6 +166,8 @@ class LLMConfig(dg.Config):
     user_prompt: str = "user.j2"
     use_lmv3_hints: bool = True
     enable_cache: bool = True
+    accumulate_context: bool = False  # Enable multi-page context accumulation
+    group_by_schematism_name: bool = True  # Group processing by schematism
 
 
 @dg.asset(
@@ -172,16 +176,16 @@ class LLMConfig(dg.Config):
     kinds={Kinds.PYTHON, Kinds.PYDANTIC},
     ins={
         "lmv3_dataset": AssetIn(key="pred__lmv3_enriched_dataset__pydantic"),
-        "ocr_dataset": AssetIn(key="pred__ocr_enriched_dataset__pydantic"),
+        "ocr_dataset": AssetIn(key="pred__llm_ocr_enriched_dataset__pydantic"),
     },
 )
 async def pred__llm_enriched_dataset__pydantic(
     context: AssetExecutionContext,
-    lmv3_dataset: BaseDataset,
+    lmv3_dataset: BaseDataset,  # pyright: ignore[reportMissingTypeArgument]
     ocr_dataset: BaseDataset[BaseDataItem],
     config: LLMConfig,
     image_storage: ImageStorageResource,
-    llm_engine: LLMEngineResource,
+    llm_engine_resource: LLMEngineResource,
 ):
     """Generate LLM predictions for each item in the lmv3_dataset.
 
@@ -190,7 +194,7 @@ async def pred__llm_enriched_dataset__pydantic(
     """
 
     # Get the actual engine instance from the resource
-    llm_model = llm_engine.get_engine()
+    llm_model = llm_engine_resource.get_engine()
 
     # Use new CachedEngine pattern
     use_case = PredictDatasetWithLLM(
@@ -198,6 +202,8 @@ async def pred__llm_enriched_dataset__pydantic(
         image_storage=image_storage,
         model_name=llm_model.used_model,
         enable_cache=config.enable_cache,
+        use_lmv3_hints=config.use_lmv3_hints,
+        accumulate_context=config.accumulate_context,
     )
 
     # Execute use case
@@ -206,7 +212,7 @@ async def pred__llm_enriched_dataset__pydantic(
         ocr_dataset=ocr_dataset,
         system_prompt=config.system_prompt,
         user_prompt=config.user_prompt,
-        use_lmv3_hints=config.use_lmv3_hints,
+        group_by_schematism_name=config.group_by_schematism_name,
     )
     response = await use_case.execute(request)
 
@@ -241,9 +247,76 @@ async def pred__llm_enriched_dataset__pydantic(
                 if random_sample
                 else None
             ),
-            "llm_executions": MetadataValue.int(response.llm_executions),
-            "cache_hits": MetadataValue.int(response.cache_hits),
-            "success_rate": MetadataValue.float(response.success_rate),
+            "execution_stats": MetadataValue.json(dict(response.execution_stats)),
+        }
+    )
+
+    return response.dataset
+
+
+class LLMOcrConfig(dg.Config):
+    """Configuration for LLM-based OCR asset."""
+
+    model_name: str = "qwen/qwen3-vl-8b-instruct"
+    system_prompt: str = "tasks/ocr/system.j2"
+    user_prompt: str = "tasks/ocr/user.j2"
+    enable_cache: bool = True
+    group_by_schematism_name: bool = True
+
+
+@dg.asset(
+    key_prefix=[AssetLayer.STG, DataSource.HUGGINGFACE],
+    group_name=ResourceGroup.DATA,
+    kinds={
+        Kinds.PYTHON,
+        Kinds.PYDANTIC,
+    },
+    ins={
+        "dataset": AssetIn(key="base__dataset__pydantic"),
+    },
+)
+async def pred__llm_ocr_enriched_dataset__pydantic(
+    context: AssetExecutionContext,
+    dataset: BaseDataset[BaseDataItem],
+    config: LLMOcrConfig,
+    image_storage: ImageStorageResource,
+    llm_engine_resource: LLMEngineResource,
+):
+    """Enrich dataset with OCR text using LLM vision capabilities.
+
+    This asset takes a dataset with images and uses an LLM (e.g., via OpenRouter)
+    to extract text with high-fidelity Markdown structural reconstruction.
+    This is an alternative to Tesseract-based OCR for higher quality extraction.
+    """
+    engine_config = llm_engine_resource.get_engine_config().model_copy(deep=True)
+    backend_type = engine_config.backend.type
+    if client := engine_config.clients.get(backend_type):
+        client.model = config.model_name
+
+    llm_engine = LLMEngine.from_config(config=engine_config)
+
+    use_case = EnrichDatasetWithLLMOCR(
+        llm_engine=llm_engine,
+        image_storage=image_storage,
+        model_name=llm_engine.used_model,
+        enable_cache=config.enable_cache,
+    )
+
+    request = EnrichWithLLMOCRRequest(
+        dataset=dataset,
+        system_prompt=config.system_prompt,
+        user_prompt=config.user_prompt,
+        group_by_schematism_name=config.group_by_schematism_name,
+    )
+    response = await use_case.execute(request)
+
+    context.add_asset_metadata(
+        {"asset_config": MetadataValue.json(config.model_dump())}
+    )
+
+    context.add_output_metadata(
+        {
+            "execution_stats": MetadataValue.json(response.execution_stats),
         }
     )
 

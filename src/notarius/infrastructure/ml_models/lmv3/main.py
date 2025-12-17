@@ -2,7 +2,6 @@ import torch
 
 from transformers import AutoProcessor, LayoutLMv3ForTokenClassification
 
-from datasets import load_dataset
 
 
 def sliding_window(processor, token_boxes, predictions, encoding):
