@@ -1,6 +1,7 @@
 """Use case for enriching dataset with LayoutLMv3 predictions."""
 
 from dataclasses import dataclass
+from pathlib import Path
 from typing import final, override
 
 from structlog import get_logger
@@ -12,6 +13,7 @@ from notarius.infrastructure.ml_models.lmv3.engine_adapter import (
     LMv3Engine,
     LMv3Request,
 )
+from notarius.infrastructure.persistence.storage import ImageRepository
 from notarius.orchestration.resources.base import ImageStorageResource
 from notarius.schemas.data.pipeline import BaseDataItem, BaseDataset, PredictionDataItem
 from notarius.shared.logger import Logger
@@ -48,7 +50,7 @@ class EnrichDatasetWithLMv3(BaseUseCase[EnrichWithLMv3Request, EnrichWithLMv3Res
     def __init__(
         self,
         lmv3_engine: LMv3Engine,
-        image_storage: ImageStorageResource,
+        image_storage: ImageRepository,
         checkpoint: str,
         enable_cache: bool = True,
     ):
@@ -94,7 +96,7 @@ class EnrichDatasetWithLMv3(BaseUseCase[EnrichWithLMv3Request, EnrichWithLMv3Res
                 logger.debug(f"Skipping item {i}/{dataset_len} - no image_path")
                 continue
 
-            image = self.image_storage.load_image(item.image_path).convert("RGB")
+            image = self.image_storage.get(Path(item.image_path)).convert("RGB")
             logger.info(f"Processing {i + 1}/{dataset_len} sample with LMv3.")
 
             # Process with cached engine - caching happens automatically!

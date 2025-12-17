@@ -2,6 +2,7 @@
 
 from collections.abc import Sequence
 from dataclasses import dataclass
+from pathlib import Path
 from typing import final, override, Callable, Any
 
 
@@ -17,6 +18,7 @@ from notarius.infrastructure.llm.utils import (
     construct_text_message,
     construct_image_message,
 )
+from notarius.infrastructure.persistence.storage import ImageRepository
 from notarius.schemas.data.pipeline import (
     BaseDataset,
     BaseDataItem,
@@ -63,7 +65,7 @@ class PredictDatasetWithLLM(BaseUseCase[PredictWithLLMRequest, PredictWithLLMRes
     def __init__(
         self,
         llm_engine: LLMEngine,
-        image_storage: ImageStorageResource,
+        image_storage: ImageRepository,
         model_name: str,
         prompt_renderer: Jinja2PromptRenderer | None = None,
         enable_cache: bool = True,
@@ -152,7 +154,7 @@ class PredictDatasetWithLLM(BaseUseCase[PredictWithLLMRequest, PredictWithLLMRes
             llm_context = self._prepare_context(item, next_item, previous_context)
 
             try:
-                image = self.image_storage.load_image(item.image_path).convert("RGB")
+                image = self.image_storage.get(Path(item.image_path)).convert("RGB")
 
                 rendered_user_prompt = self.prompt_renderer.render_prompt(
                     template_name=user_prompt, context=llm_context

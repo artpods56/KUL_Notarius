@@ -2,6 +2,7 @@
 
 from collections.abc import Sequence
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Never, final, override
 
 from notarius.application.ports.outbound.cached_engine import (
@@ -18,6 +19,7 @@ from notarius.infrastructure.llm.utils import (
     construct_text_message,
     construct_image_message,
 )
+from notarius.infrastructure.persistence.storage import ImageRepository
 from notarius.orchestration.resources.base import ImageStorageResource
 from notarius.schemas.data.pipeline import BaseDataset, BaseDataItem, BaseItemDataset
 from notarius.shared.logger import get_logger
@@ -61,7 +63,7 @@ class EnrichDatasetWithLLMOCR(
     def __init__(
         self,
         llm_engine: LLMEngine,
-        image_storage: ImageStorageResource,
+        image_storage: ImageRepository,
         model_name: str,
         prompt_renderer: Jinja2PromptRenderer | None = None,
         enable_cache: bool = True,
@@ -127,7 +129,7 @@ class EnrichDatasetWithLLMOCR(
             )
 
             try:
-                image = self.image_storage.load_image(item.image_path).convert("RGB")
+                image = self.image_storage.get(Path(item.image_path)).convert("RGB")
 
                 user_message = construct_image_message(
                     pil_image=image, text=rendered_user_prompt, role="user"

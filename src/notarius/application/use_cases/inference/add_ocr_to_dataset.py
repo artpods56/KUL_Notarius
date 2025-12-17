@@ -1,8 +1,10 @@
 """Use case for enriching dataset with OCR predictions."""
 
 from dataclasses import dataclass
+from pathlib import Path
 from typing import final, override, cast
 
+from notarius.infrastructure.persistence.storage import ImageRepository
 from structlog import get_logger
 
 from notarius.application.ports.outbound.cached_engine import CachedEngine
@@ -46,7 +48,7 @@ class EnrichDatasetWithOCR(BaseUseCase[EnrichWithOCRRequest, EnrichWithOCRRespon
     def __init__(
         self,
         ocr_engine: OCREngine,
-        image_storage: ImageStorageResource,
+        image_storage: ImageRepository,
         language: str = "lat+pol+rus",
         enable_cache: bool = True,
     ):
@@ -92,7 +94,7 @@ class EnrichDatasetWithOCR(BaseUseCase[EnrichWithOCRRequest, EnrichWithOCRRespon
                 logger.debug(f"Skipping item {i}/{dataset_len} - no image_path")
                 continue
 
-            image = self.image_storage.load_image(item.image_path).convert("RGB")
+            image = self.image_storage.get(Path(item.image_path)).convert("RGB")
             logger.info(f"Processing {i + 1}/{dataset_len} sample with OCR.")
 
             # Process with cached engine - caching happens automatically!
