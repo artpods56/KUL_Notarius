@@ -10,7 +10,7 @@ streaming: false
 
 column_map:
   image_column: "image"
-  ground_truth_column: "results"
+  ground_truth_column: "sample"
   boxes_column: "bboxes"
   labels_column: "labels"
   tokens_column: "words"
